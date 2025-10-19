@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "🧢 Головные уборы": {"normal": 700, "express": 4000},
         "👜 Сумки (маленькие)": {"normal": 1400, "express": 5000},
         "🎒 Сумки (большие)": {"normal": 1700, "express": 6500},
+        "📦 Другое": {"normal": 1500, "express": 5000}
     };
 
     const COMMISSION = 1000; // включаем в доставку
@@ -83,7 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 Ссылка: <input type="text" value="${item.link}" onchange="setValue(${i},'link',this.value)" placeholder="Ссылка"><br>
                 Цена (¥): <input type="number" value="${item.price}" onchange="setValue(${i},'price',this.value)" placeholder="Цена"><br>
                 Размер: <input type="text" value="${item.size}" onchange="setValue(${i},'size',this.value)" placeholder="Размер"><br>
-                Цвет кнопки:
+                Цвет:
                 <select onchange="setValue(${i},'color',this.value)">
                     <option value="Голубой" ${item.color==="Голубой"?"selected":""}>Голубой</option>
                     <option value="Черный" ${item.color==="Черный"?"selected":""}>Черный</option>
@@ -137,4 +138,3 @@ document.addEventListener("DOMContentLoaded", () => {
         renderCart();
     });
 });
-
