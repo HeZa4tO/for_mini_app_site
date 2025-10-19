@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 Ссылка: <input type="text" value="${item.link}" onchange="setValue(${i},'link',this.value)" placeholder="Ссылка"><br>
                 Цена (¥): <input type="number" value="${item.price}" onchange="setValue(${i},'price',this.value)" placeholder="Цена"><br>
                 Размер: <input type="text" value="${item.size}" onchange="setValue(${i},'size',this.value)" placeholder="Размер"><br>
-                Цвет:
+                Цвет кнопки:
                 <select onchange="setValue(${i},'color',this.value)">
                     <option value="Голубой" ${item.color==="Голубой"?"selected":""}>Голубой</option>
                     <option value="Черный" ${item.color==="Черный"?"selected":""}>Черный</option>
@@ -133,3 +133,4 @@ document.addEventListener("DOMContentLoaded", () => {
         renderCart();
     });
 });
+
