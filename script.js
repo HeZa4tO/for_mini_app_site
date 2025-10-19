@@ -21,6 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
         "📦 Другое": {"normal": 1500, "express": 5000}
     };
 
+    const COMMISSION = 1000; // включаем в доставку
+    const DISCOUNT_OVER_3 = 750; // скидка при 3 и более товаров
     let cart = [];
     let rub_rate = 13;
 
@@ -63,12 +65,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const cartDiv = document.getElementById("cart");
         cartDiv.innerHTML = "";
         let total = 0;
-        let commission = cart.length >=3 ? 750*cart.length : 1000;
 
         cart.forEach((item,i)=>{
             const prices = DELIVERY_PRICES[item.category] || {normal: 2000, express: 6500};
-            const deliveryCost = item.delivery === "Экспресс" ? prices.express : prices.normal;
+            const deliveryCost = (item.delivery === "Экспресс" ? prices.express : prices.normal) + COMMISSION;
             const priceRub = parseFloat(item.price) ? parseFloat(item.price)*rub_rate : 0;
+
             total += priceRub + deliveryCost;
 
             const div = document.createElement("div");
@@ -82,7 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 Ссылка: <input type="text" value="${item.link}" onchange="setValue(${i},'link',this.value)" placeholder="Ссылка"><br>
                 Цена (¥): <input type="number" value="${item.price}" onchange="setValue(${i},'price',this.value)" placeholder="Цена"><br>
                 Размер: <input type="text" value="${item.size}" onchange="setValue(${i},'size',this.value)" placeholder="Размер"><br>
-                Цвет кнопки:
+                Цвет:
                 <select onchange="setValue(${i},'color',this.value)">
                     <option value="Голубой" ${item.color==="Голубой"?"selected":""}>Голубой</option>
                     <option value="Черный" ${item.color==="Черный"?"selected":""}>Черный</option>
@@ -95,6 +97,11 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
             cartDiv.appendChild(div);
         });
+
+        // Скидка при 3 и более товарах
+        if(cart.length >= 3){
+            total -= DISCOUNT_OVER_3;
+        }
 
         let totalDiv = document.getElementById("totalSum");
         if(!totalDiv){
@@ -119,18 +126,15 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // Сохраняем в JSON
+        // Отправка заказа
         const orderJSON = JSON.stringify(cart, null, 2);
         console.log("Заказ в JSON:", orderJSON);
 
-        // Можно отправлять через Telegram WebApp:
         if(window.Telegram?.WebApp?.sendData){
             Telegram.WebApp.sendData(orderJSON);
         }
 
-        // Очищаем корзину
         cart=[];
         renderCart();
     });
 });
-
