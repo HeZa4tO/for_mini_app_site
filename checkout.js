@@ -18,16 +18,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const cart = JSON.parse(sessionStorage.getItem("cart") || "[]");
     const checkoutCart = document.getElementById("checkoutCart");
     const totalSumDiv = document.getElementById("totalSum");
+
     let totalRub = 0;
 
-    // WebApp init
-    if (window.Telegram && window.Telegram.WebApp) {
-        Telegram.WebApp.ready();
-        Telegram.WebApp.setHeaderTitle("AV DROP");
-        Telegram.WebApp.setHeaderColor("#0088cc");
-    } else {
-        alert("⚠️ Откройте через Telegram WebApp!");
+    // Проверка Telegram WebApp
+    if (!window.Telegram?.WebApp) {
+        alert("⚠️ Откройте эту страницу через Telegram WebApp!");
+        return;
     }
+
+    const tg = Telegram.WebApp;
+    tg.ready();
+    tg.setHeaderTitle("AV DROP");
+    tg.setHeaderColor("#0088cc");
 
     // Вывод корзины
     cart.forEach(item => {
@@ -40,6 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
         item.delivery_price = deliveryRub;
         item.tax = taxRub;
         item.total_price_rub = itemTotal;
+
         totalRub += itemTotal;
 
         const div = document.createElement("div");
@@ -64,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     totalSumDiv.textContent = `💰 Общая сумма: ₽${Math.round(totalRub).toLocaleString()}`;
 
-    // Отправка через Base64
+    // Кнопка "Купить"
     document.getElementById("buyBtn").addEventListener("click", () => {
         const city = document.getElementById("city").value.trim();
         const address = document.getElementById("address").value.trim();
@@ -79,22 +83,42 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         let valid = true;
-        if(!city){ document.getElementById("city").classList.add("error"); document.getElementById("cityError").classList.add("show"); valid = false; }
-        if(!address){ document.getElementById("address").classList.add("error"); document.getElementById("addressError").classList.add("show"); valid = false; }
-        if(!fullname){ document.getElementById("fullname").classList.add("error"); document.getElementById("fullnameError").classList.add("show"); valid = false; }
-        if(!/^7\d{10}$/.test(phone)){ document.getElementById("phone").classList.add("error"); document.getElementById("phoneError").classList.add("show"); valid = false; }
+        if(!city){ 
+            document.getElementById("city").classList.add("error");
+            const el = document.getElementById("cityError");
+            el.textContent = "Введите город"; el.classList.add("show");
+            valid = false;
+        }
+        if(!address){ 
+            document.getElementById("address").classList.add("error");
+            const el = document.getElementById("addressError");
+            el.textContent = "Введите адрес"; el.classList.add("show");
+            valid = false;
+        }
+        if(!fullname){ 
+            document.getElementById("fullname").classList.add("error");
+            const el = document.getElementById("fullnameError");
+            el.textContent = "Введите ФИО"; el.classList.add("show");
+            valid = false;
+        }
+        if(!/^7\d{10}$/.test(phone)){ 
+            document.getElementById("phone").classList.add("error");
+            const el = document.getElementById("phoneError");
+            el.textContent = "Введите корректный номер в формате +7xxxxxxxxxx";
+            el.classList.add("show");
+            valid = false;
+        }
+
         if(!valid) return;
 
         const orderData = { city, address, fullname, phone, cart };
-        const base64Data = btoa(JSON.stringify(orderData)); // кодируем в Base64
 
-        if(window.Telegram && window.Telegram.WebApp){
-            Telegram.WebApp.sendData(base64Data);
-            Telegram.WebApp.close();
-        } else {
-            alert("⚠️ Telegram WebApp недоступен!");
-        }
+        // Base64 кодирование
+        const encoded = btoa(JSON.stringify(orderData));
 
+        tg.sendData(encoded); // Отправляем закодированные данные
+        tg.close(); // закрываем WebApp
         sessionStorage.removeItem("cart");
+        alert("✅ Заказ отправлен через Telegram!");
     });
 });
