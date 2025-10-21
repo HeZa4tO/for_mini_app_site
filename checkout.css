@@ -79,7 +79,7 @@ input, select {
   color: #ffffff;
 }
 
-#buyBtn {
+#sendOrder {
   width: 100%;
   max-width: 850px;
   display: block;
@@ -96,7 +96,7 @@ input, select {
   transition: all 0.2s ease-in-out;
 }
 
-#buyBtn:hover {
+#sendOrder:hover {
   background: linear-gradient(145deg, #2ecc71, #219150);
   transform: translateY(-2px);
 }

@@ -1,20 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Проверка открытия через Telegram WebApp
-    if (!window.Telegram?.WebApp) {
-        alert("❌ Откройте эту страницу через Telegram WebApp!");
-        return;
-    }
-
-    const TelegramWebApp = window.Telegram.WebApp;
-    TelegramWebApp.ready(); // уведомляем Telegram, что WebApp готов
-
-    // Получаем корзину из sessionStorage
+    // Берём корзину из sessionStorage
     const cart = JSON.parse(sessionStorage.getItem("cart") || "[]");
 
     // Элементы страницы
     const checkoutCart = document.getElementById("checkoutCart");
     const totalSumDiv = document.getElementById("totalSum");
-    const sendButton = TelegramWebApp.MainButton;
+    const sendButton = document.getElementById("sendOrder");
 
     const RUB_RATE = 13;
 
@@ -23,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     cart.forEach(item => {
         const priceYuan = Number(item.price || 0);
         const priceRub = Math.ceil(priceYuan * RUB_RATE);
-        const deliveryRub = Math.ceil(DELIVERY_PRICES[item.category][item.delivery] || 2000);
+        const deliveryRub = Math.ceil(item.delivery_price || 2000);
         const taxRub = Math.ceil(priceRub * 0.1);
         const itemTotalRub = priceRub + deliveryRub + taxRub;
         totalRub += itemTotalRub;
@@ -35,48 +26,47 @@ document.addEventListener("DOMContentLoaded", () => {
 
     totalSumDiv.textContent = `💰 Общая сумма: ₽${totalRub}`;
 
-    // Настройка кнопки Telegram WebApp
-    sendButton.text = "Оформить заказ";
-    sendButton.show();
-    sendButton.enable();
-
-    sendButton.onClick(() => {
+    sendButton.addEventListener("click", async () => {
         // Сбор данных пользователя
-        const userData = {
-            name: document.getElementById("name").value || "",
-            phone: document.getElementById("phone").value || "",
-            city: document.getElementById("city").value || "",
-            address: document.getElementById("address").value || ""
-        };
+        const fullname = document.getElementById("fullname")?.value.trim() || "";
+        const phone = document.getElementById("phone")?.value.trim() || "";
+        const city = document.getElementById("city")?.value.trim() || "";
+        const address = document.getElementById("address")?.value.trim() || "";
 
-        // Проверка заполненности всех полей
-        if (!userData.name || !userData.phone || !userData.city || !userData.address) {
-            alert("Пожалуйста, заполните все поля пользователя!");
+        if (!fullname || !phone || !city || !address) {
+            alert("Пожалуйста, заполните все поля!");
             return;
         }
 
-        // Подготовка данных для отправки
         const orderData = {
             cart,
             total: totalRub,
-            user: userData
+            user: { fullname, phone, city, address }
         };
 
-        // Отправка данных боту
-        TelegramWebApp.sendData(JSON.stringify(orderData));
+        try {
+            // Отправка на локальный FastAPI
+            const res = await fetch("http://127.0.0.1:8000/save_order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(orderData)
+            });
 
-        // Деактивируем кнопку, чтобы пользователь не отправил дважды
-        sendButton.disable();
+            if (!res.ok) throw new Error("Ошибка при отправке на сервер");
 
-        // Можно закрыть WebApp автоматически (опционально)
-        // TelegramWebApp.close();
+            alert("✅ Заказ успешно отправлен!");
+
+            // Если Telegram WebApp доступен — отправляем туда
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.sendData(JSON.stringify(orderData));
+            }
+
+            // Можно очистить корзину
+            sessionStorage.removeItem("cart");
+
+        } catch (e) {
+            console.error(e);
+            alert("❌ Не удалось отправить заказ. Попробуйте снова.");
+        }
     });
-
-    // Опционально: кнопка закрытия WebApp
-    const closeButton = document.getElementById("closeWebApp");
-    if (closeButton) {
-        closeButton.addEventListener("click", () => {
-            TelegramWebApp.close();
-        });
-    }
 });
