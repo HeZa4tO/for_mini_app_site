@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Оформление заказа</title>
+<link rel="stylesheet" href="checkout.css">
+</head>
+<body>
+  <h1>Оформление заказа</h1>
+
+  <div id="orderForm">
+    <label>Способ получения:
+      <select id="deliveryMethod">
+        <option value="СДЭК">Доставка (СДЭК)</option>
+      </select>
+    </label>
+
+    <label>Город:
+      <input type="text" id="city" placeholder="Введите город">
+      <span class="error-message" id="cityError"></span>
+    </label>
+
+    <label>Адрес пункта СДЭК:
+      <input type="text" id="address" placeholder="Введите адрес пункта">
+      <span class="error-message" id="addressError"></span>
+    </label>
+
+    <label>ФИО:
+      <input type="text" id="fullname" placeholder="Введите ФИО">
+      <span class="error-message" id="fullnameError"></span>
+    </label>
+
+    <label>Номер телефона:
+      <input type="text" id="phone" placeholder="+7 (___) ___-__-__">
+      <span class="error-message" id="phoneError"></span>
+    </label>
+  </div>
+
+  <h2>Товары</h2>
+  <div id="checkoutCart"></div>
+
+  <div id="totalSum"></div>
+
+  <button id="buyBtn">Buy</button>
+
+  <script src="checkout.js"></script>
+</body>
+</html>
