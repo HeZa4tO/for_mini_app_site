@@ -93,8 +93,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if(!valid) return;
 
-        alert("Заказ успешно оформлен!");
-        sessionStorage.removeItem("cart");
-        window.location.href = "index.html";
+        // Собираем данные
+        const orderData = {
+            city,
+            address,
+            fullname,
+            phone,
+            cart
+        };
+
+        // Отправка в бот через Telegram WebApp
+        if (window.Telegram.WebApp) {
+            Telegram.WebApp.sendData(JSON.stringify(orderData));
+            alert("✅ Заказ отправлен!");
+            sessionStorage.removeItem("cart");
+        } else {
+            alert("Telegram WebApp не найден. Попробуйте открыть через Telegram.");
+        }
     });
 });
