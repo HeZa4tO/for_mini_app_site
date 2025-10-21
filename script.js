@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const categoriesDiv = document.getElementById("categories");
     const cartDiv = document.getElementById("cart");
 
+    // создание карточек категорий
     CATEGORIES.forEach((cat, idx) => {
         const div = document.createElement("div");
         div.className = "category-card";
@@ -48,25 +49,23 @@ document.addEventListener("DOMContentLoaded", () => {
         cart.push({
             category: cat,
             link: "",
-            price: 0,
+            price: 1,
             size: "",
             color: "Голубой",
             delivery: "Обычная 🚚"
         });
         renderCart();
-        updateCount();
     }
 
     window.removeFromCart = function(i){
         cart.splice(i,1);
         renderCart();
-        updateCount();
     }
 
     window.setValue = function(i, field, value){
         if(field === "price"){
             value = parseFloat(value);
-            if(isNaN(value) || value < 0) value = 0;
+            if(isNaN(value) || value <= 0) value = 1;
         }
         cart[i][field] = value;
         renderCart();
@@ -77,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
         let totalRub = 0;
 
         cart.forEach((item,i)=>{
-            const priceYuan = Number(item.price || 0);
+            const priceYuan = Number(item.price || 1);
             const priceRub = Math.round(priceYuan * RUB_RATE);
             const deliveryRub = Math.round(DELIVERY_PRICES[item.category][item.delivery] || 0);
             const taxRub = Math.round(priceRub * 0.1);
@@ -149,12 +148,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         });
-
-        window.onclick = function(e){
-            if(!e.target.closest(".custom-select")){
-                document.querySelectorAll(".custom-select .options").forEach(opt=>opt.classList.remove("show"));
-            }
-        }
     }
 
     function initCustomDelivery(){
@@ -173,11 +166,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         });
+    }
 
-        window.onclick = function(e){
-            if(!e.target.closest(".custom-delivery")){
-                document.querySelectorAll(".custom-delivery .options").forEach(opt=>opt.classList.remove("show"));
-            }
+    // один обработчик для всего окна
+    window.onclick = function(e){
+        if(!e.target.closest(".custom-select")){
+            document.querySelectorAll(".custom-select .options").forEach(opt=>opt.classList.remove("show"));
+        }
+        if(!e.target.closest(".custom-delivery")){
+            document.querySelectorAll(".custom-delivery .options").forEach(opt=>opt.classList.remove("show"));
         }
     }
 
@@ -190,7 +187,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("sendOrder").addEventListener("click", ()=>{
         if(cart.length === 0){ alert("Корзина пуста!"); return; }
-        // Проверка что все товары заполнены
         for(let i=0; i<cart.length; i++){
             const item = cart[i];
             if(!item.link || !item.price || !item.size){
@@ -201,4 +197,6 @@ document.addEventListener("DOMContentLoaded", () => {
         sessionStorage.setItem("cart", JSON.stringify(cart));
         window.location.href = "checkout.html";
     });
+
+    renderCart();
 });
