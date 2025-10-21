@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ];
 
     const COLORS = ["Голубой", "Черный"];
-    const COLOR_CODES = { "Голубой": "#00bfff", "Черный": "#2c3e50" };
+    const COLOR_CODES = { "Голубой": "#00bfffff", "Черный": "#000000ff" };
     const DELIVERY_OPTIONS = ["Обычная 🚚", "Экспресс 🚀"];
     const RUB_RATE = 13;
 
@@ -30,7 +30,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const categoriesDiv = document.getElementById("categories");
     const cartDiv = document.getElementById("cart");
 
-    // создание карточек категорий
     CATEGORIES.forEach((cat, idx) => {
         const div = document.createElement("div");
         div.className = "category-card";
@@ -77,10 +76,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         cart.forEach((item,i)=>{
             const priceYuan = Number(item.price || 1);
-            const priceRub = Math.round(priceYuan * RUB_RATE);
-            const deliveryRub = Math.round(DELIVERY_PRICES[item.category][item.delivery] || 0);
-            const taxRub = Math.round(priceRub * 0.1);
-            const itemTotalRub = Math.round(priceRub + deliveryRub + taxRub);
+            const priceRub = Math.ceil(priceYuan * RUB_RATE);
+            const deliveryRub = Math.ceil(DELIVERY_PRICES[item.category][item.delivery] || 0);
+            const taxRub = Math.ceil(priceRub * 0.1);
+            const itemTotalRub = Math.ceil(priceRub + deliveryRub + taxRub);
             totalRub += itemTotalRub;
 
             const div = document.createElement("div");
@@ -93,18 +92,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 <label>Ссылка: <input type="text" value="${item.link}" onchange="setValue(${i},'link',this.value)" placeholder="Ссылка"></label>
                 <label>Цена (¥): <input type="number" value="${item.price}" onchange="setValue(${i},'price',this.value)" placeholder="Цена"></label>
                 <label>Размер: <input type="text" value="${item.size}" onchange="setValue(${i},'size',this.value)" placeholder="Размер"></label>
+                
                 <div class="custom-select-wrapper">
-                    <label>Цвет:</label>
+                    <label>Цвет кнопки:</label>
                     <div class="custom-select" data-index="${i}">
                         <div class="selected">
                             <span class="color-square" style="background-color:${COLOR_CODES[item.color]}"></span>
                             <span class="color-name">${item.color}</span>
                         </div>
                         <div class="options">
-                            ${COLORS.map(c=>`<div class="option" data-color="${c}"><span class="color-square" style="background-color:${COLOR_CODES[c]}"></span>${c}</div>`).join('')}
+                            ${COLORS.map(c=>`<div class="option" data-color="${c}">
+                                <span class="color-square" style="background-color:${COLOR_CODES[c]}"></span>${c}
+                            </div>`).join('')}
                         </div>
                     </div>
                 </div>
+
                 <div class="custom-delivery-wrapper">
                     <label>Доставка:</label>
                     <div class="custom-delivery" data-index="${i}">
@@ -114,7 +117,13 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                     </div>
                 </div>
-                <div class="item-total">Итого: ₽${itemTotalRub.toLocaleString()} (¥${priceYuan})</div>
+
+                <div class="item-total">
+                    <div style="font-weight:600;">Итого: ₽${itemTotalRub.toLocaleString()} (¥${priceYuan})</div>
+                    <div style="font-size:12px; color:#777;">
+                        Товар ₽${priceRub.toLocaleString()}, доставка ₽${deliveryRub.toLocaleString()}, комиссия ₽${taxRub.toLocaleString()}
+                    </div>
+                </div>
             `;
             cartDiv.appendChild(div);
         });
@@ -124,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
         totalDiv.style.fontWeight = "700";
         totalDiv.style.fontSize = "18px";
         totalDiv.style.marginTop = "15px";
-        totalDiv.textContent = `💰 Общая сумма: ₽${Math.round(totalRub).toLocaleString()}`;
+        totalDiv.textContent = `💰 Общая сумма: ₽${Math.ceil(totalRub).toLocaleString()}`;
         cartDiv.appendChild(totalDiv);
 
         initCustomSelect();
@@ -137,9 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const selected = select.querySelector(".selected");
             const options = select.querySelector(".options");
             const index = select.dataset.index;
-
             selected.onclick = ()=> options.classList.toggle("show");
-
             options.querySelectorAll(".option").forEach(opt=>{
                 opt.onclick = ()=>{
                     const color = opt.dataset.color;
@@ -155,9 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const selected = delivery.querySelector(".selected");
             const options = delivery.querySelector(".options");
             const index = delivery.dataset.index;
-
             selected.onclick = ()=> options.classList.toggle("show");
-
             options.querySelectorAll(".option").forEach(opt=>{
                 opt.onclick = ()=>{
                     const value = opt.dataset.delivery;
@@ -168,7 +173,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // один обработчик для всего окна
     window.onclick = function(e){
         if(!e.target.closest(".custom-select")){
             document.querySelectorAll(".custom-select .options").forEach(opt=>opt.classList.remove("show"));
