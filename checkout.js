@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let totalRub = 0;
 
+    // Вывод корзины
     cart.forEach(item => {
         const priceYuan = Number(item.price || 0);
         const priceRub = Math.round(priceYuan * RUB_RATE);
@@ -28,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const taxRub = Math.round(priceRub * 0.1);
         const itemTotal = priceRub + deliveryRub + taxRub;
 
-        // Добавляем delivery_price и tax в объект товара для отправки
+        // Сохраняем данные для отправки в Telegram
         item.delivery_price = deliveryRub;
         item.tax = taxRub;
         item.total_price_rub = itemTotal;
@@ -57,6 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     totalSumDiv.textContent = `💰 Общая сумма: ₽${Math.round(totalRub).toLocaleString()}`;
 
+    // Обработка кнопки "Купить"
     document.getElementById("buyBtn").addEventListener("click", () => {
         const city = document.getElementById("city").value.trim();
         const address = document.getElementById("address").value.trim();
@@ -99,20 +101,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if(!valid) return;
 
-        const orderData = {
-            city,
-            address,
-            fullname,
-            phone,
-            cart
-        };
+        const orderData = { city, address, fullname, phone, cart };
 
+        // Отправка через Telegram WebApp
         if(window.Telegram && window.Telegram.WebApp){
             Telegram.WebApp.sendData(JSON.stringify(orderData));
-            alert("✅ Заказ успешно отправлен!");
-            sessionStorage.removeItem("cart");
+            alert("✅ Заказ отправлен через Telegram!");
         } else {
-            alert("Telegram WebApp не найден. Откройте через Telegram.");
+            alert("⚠️ Telegram WebApp недоступен. Заказ не отправлен.");
         }
+
+        sessionStorage.removeItem("cart");
     });
 });
