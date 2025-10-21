@@ -27,6 +27,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const deliveryRub = Math.round(DELIVERY_PRICES[item.category][item.delivery] || 0);
         const taxRub = Math.round(priceRub * 0.1);
         const itemTotal = priceRub + deliveryRub + taxRub;
+
+        // Добавляем delivery_price и tax в объект товара для отправки
+        item.delivery_price = deliveryRub;
+        item.tax = taxRub;
+        item.total_price_rub = itemTotal;
+
         totalRub += itemTotal;
 
         const div = document.createElement("div");
@@ -55,16 +61,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const city = document.getElementById("city").value.trim();
         const address = document.getElementById("address").value.trim();
         const fullname = document.getElementById("fullname").value.trim();
-        const phone = document.getElementById("phone").value.replace(/\D/g, "");
+        const phoneRaw = document.getElementById("phone").value.replace(/\D/g, "");
+        const phone = phoneRaw.startsWith("7") ? phoneRaw : "7" + phoneRaw;
 
-        // Сброс ошибок
         ["city","address","fullname","phone"].forEach(id => {
             document.getElementById(id).classList.remove("error");
-            document.getElementById(id+"Error").classList.remove("show");
+            const el = document.getElementById(id+"Error");
+            if(el) el.classList.remove("show");
         });
 
         let valid = true;
-
         if(!city){ 
             document.getElementById("city").classList.add("error");
             const el = document.getElementById("cityError");
@@ -93,7 +99,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if(!valid) return;
 
-        // Собираем данные
         const orderData = {
             city,
             address,
@@ -102,13 +107,12 @@ document.addEventListener("DOMContentLoaded", () => {
             cart
         };
 
-        // Отправка в бот через Telegram WebApp
-        if (window.Telegram.WebApp) {
+        if(window.Telegram && window.Telegram.WebApp){
             Telegram.WebApp.sendData(JSON.stringify(orderData));
-            alert("✅ Заказ отправлен!");
+            alert("✅ Заказ успешно отправлен!");
             sessionStorage.removeItem("cart");
         } else {
-            alert("Telegram WebApp не найден. Попробуйте открыть через Telegram.");
+            alert("Telegram WebApp не найден. Откройте через Telegram.");
         }
     });
 });
