@@ -6,31 +6,40 @@ document.addEventListener("DOMContentLoaded", () => {
         "🧢 Головные уборы","👜 Сумки (маленькие)","🎒 Сумки (большие)","📦 Другое"
     ];
 
+    const COLORS = ["Голубой", "Черный"];
+    const COLOR_CODES = { "Голубой": "#00bfff", "Черный": "#2c3e50" };
+    const DELIVERY_OPTIONS = ["Обычная 🚚", "Экспресс 🚀"];
+    const RUB_RATE = 13;
+
     const DELIVERY_PRICES = {
-        "👟 Кроссовки": {"normal": 2000, "express": 6500},
-        "🥾 Ботинки": {"normal": 2100, "express": 7000},
-        "🧥 Толстовки, кофты, лёгкие куртки": {"normal": 1500, "express": 5000},
-        "👕 Футболки, шорты": {"normal": 1300, "express": 4500},
-        "👖 Штаны, джинсы": {"normal": 1500, "express": 5000},
-        "🧤 Зимние куртки, пальто": {"normal": 1700, "express": 5500},
-        "🧦 Носки, майки, нижнее бельё": {"normal": 700, "express": 4000},
-        "🕶 Очки, парфюм, украшения, часы": {"normal": 700, "express": 4000},
-        "🧢 Головные уборы": {"normal": 700, "express": 4000},
-        "👜 Сумки (маленькие)": {"normal": 1400, "express": 5000},
-        "🎒 Сумки (большие)": {"normal": 1700, "express": 6500},
-        "📦 Другое": {"normal": 1500, "express": 5000}
+        "👟 Кроссовки": {"Обычная 🚚": 2000, "Экспресс 🚀": 6500},
+        "🥾 Ботинки": {"Обычная 🚚": 2100, "Экспресс 🚀": 7000},
+        "🧥 Толстовки, кофты, лёгкие куртки": {"Обычная 🚚": 1500, "Экспресс 🚀": 5000},
+        "👕 Футболки, шорты": {"Обычная 🚚": 1300, "Экспресс 🚀": 4500},
+        "👖 Штаны, джинсы": {"Обычная 🚚": 1500, "Экспресс 🚀": 5000},
+        "🧤 Зимние куртки, пальто": {"Обычная 🚚": 1700, "Экспресс 🚀": 5500},
+        "🧦 Носки, майки, нижнее бельё": {"Обычная 🚚": 700, "Экспресс 🚀": 4000},
+        "🕶 Очки, парфюм, украшения, часы": {"Обычная 🚚": 700, "Экспресс 🚀": 4000},
+        "🧢 Головные уборы": {"Обычная 🚚": 700, "Экспресс 🚀": 4000},
+        "👜 Сумки (маленькие)": {"Обычная 🚚": 1400, "Экспресс 🚀": 5000},
+        "🎒 Сумки (большие)": {"Обычная 🚚": 1700, "Экспресс 🚀": 6500},
+        "📦 Другое": {"Обычная 🚚": 1500, "Экспресс 🚀": 5000}
     };
 
-    const COMMISSION = 1000; // включаем в доставку
-    const DISCOUNT_OVER_3 = 750; // скидка при 3 и более товаров
     let cart = [];
-    let rub_rate = 13;
-
     const categoriesDiv = document.getElementById("categories");
+    const cartDiv = document.getElementById("cart");
+
     CATEGORIES.forEach((cat, idx) => {
         const div = document.createElement("div");
         div.className = "category-card";
-        div.innerHTML = `<strong>${cat}</strong> <button onclick="addToCart(${idx})">+</button>`;
+        div.innerHTML = `
+            <span class="category-name">${cat}</span>
+            <div class="controls">
+                <button class="btn" onclick="addToCart(${idx})">+</button>
+                <span class="count" id="count-${idx}">0</span>
+            </div>
+        `;
         categoriesDiv.appendChild(div);
     });
 
@@ -39,102 +48,157 @@ document.addEventListener("DOMContentLoaded", () => {
         cart.push({
             category: cat,
             link: "",
-            price: "",
+            price: 0,
             size: "",
             color: "Голубой",
-            delivery: "Обычная"
+            delivery: "Обычная 🚚"
         });
         renderCart();
+        updateCount();
     }
 
     window.removeFromCart = function(i){
         cart.splice(i,1);
         renderCart();
+        updateCount();
     }
 
     window.setValue = function(i, field, value){
-        if(field === "price" && (value === "" || parseFloat(value) <= 0)){
-            alert("Введите корректную цену больше 0");
-            return;
+        if(field === "price"){
+            value = parseFloat(value);
+            if(isNaN(value) || value < 0) value = 0;
         }
         cart[i][field] = value;
         renderCart();
     }
 
     function renderCart(){
-        const cartDiv = document.getElementById("cart");
         cartDiv.innerHTML = "";
-        let total = 0;
+        let totalRub = 0;
 
         cart.forEach((item,i)=>{
-            const prices = DELIVERY_PRICES[item.category] || {normal: 2000, express: 6500};
-            const deliveryCost = (item.delivery === "Экспресс" ? prices.express : prices.normal) + COMMISSION;
-            const priceRub = parseFloat(item.price) ? parseFloat(item.price)*rub_rate : 0;
-
-            total += priceRub + deliveryCost;
+            const priceYuan = Number(item.price || 0);
+            const priceRub = Math.round(priceYuan * RUB_RATE);
+            const deliveryRub = Math.round(DELIVERY_PRICES[item.category][item.delivery] || 0);
+            const taxRub = Math.round(priceRub * 0.1);
+            const itemTotalRub = Math.round(priceRub + deliveryRub + taxRub);
+            totalRub += itemTotalRub;
 
             const div = document.createElement("div");
             div.className = "cart-item";
-            div.style.background = item.color==="Голубой"?"#d0f0ff":"#d3d3d3";
-            div.style.border = item.delivery==="Экспресс"?"2px solid #ffcccb":"1px solid #ccc";
-
             div.innerHTML = `
-                <strong>${item.category}</strong>
-                <button onclick="removeFromCart(${i})">-</button><br>
-                Ссылка: <input type="text" value="${item.link}" onchange="setValue(${i},'link',this.value)" placeholder="Ссылка"><br>
-                Цена (¥): <input type="number" value="${item.price}" onchange="setValue(${i},'price',this.value)" placeholder="Цена"><br>
-                Размер: <input type="text" value="${item.size}" onchange="setValue(${i},'size',this.value)" placeholder="Размер"><br>
-                Цвет:
-                <select onchange="setValue(${i},'color',this.value)">
-                    <option value="Голубой" ${item.color==="Голубой"?"selected":""}>Голубой</option>
-                    <option value="Черный" ${item.color==="Черный"?"selected":""}>Черный</option>
-                </select><br>
-                Доставка:
-                <select onchange="setValue(${i},'delivery',this.value)">
-                    <option value="Обычная" ${item.delivery==="Обычная"?"selected":""}>Обычная</option>
-                    <option value="Экспресс" ${item.delivery==="Экспресс"?"selected":""}>Экспресс</option>
-                </select>
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:6px;">
+                    <strong>${item.category}</strong>
+                    <button class="remove-btn" onclick="removeFromCart(${i})">×</button>
+                </div>
+                <label>Ссылка: <input type="text" value="${item.link}" onchange="setValue(${i},'link',this.value)" placeholder="Ссылка"></label>
+                <label>Цена (¥): <input type="number" value="${item.price}" onchange="setValue(${i},'price',this.value)" placeholder="Цена"></label>
+                <label>Размер: <input type="text" value="${item.size}" onchange="setValue(${i},'size',this.value)" placeholder="Размер"></label>
+                <div class="custom-select-wrapper">
+                    <label>Цвет:</label>
+                    <div class="custom-select" data-index="${i}">
+                        <div class="selected">
+                            <span class="color-square" style="background-color:${COLOR_CODES[item.color]}"></span>
+                            <span class="color-name">${item.color}</span>
+                        </div>
+                        <div class="options">
+                            ${COLORS.map(c=>`<div class="option" data-color="${c}"><span class="color-square" style="background-color:${COLOR_CODES[c]}"></span>${c}</div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+                <div class="custom-delivery-wrapper">
+                    <label>Доставка:</label>
+                    <div class="custom-delivery" data-index="${i}">
+                        <div class="selected">${item.delivery}</div>
+                        <div class="options">
+                            ${DELIVERY_OPTIONS.map(d=>`<div class="option" data-delivery="${d}">${d}</div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+                <div class="item-total">Итого: ₽${itemTotalRub.toLocaleString()} (¥${priceYuan})</div>
             `;
             cartDiv.appendChild(div);
         });
 
-        // Скидка при 3 и более товарах
-        if(cart.length >= 3){
-            total -= DISCOUNT_OVER_3;
-        }
+        const totalDiv = document.createElement("div");
+        totalDiv.id = "cartTotal";
+        totalDiv.style.fontWeight = "700";
+        totalDiv.style.fontSize = "18px";
+        totalDiv.style.marginTop = "15px";
+        totalDiv.textContent = `💰 Общая сумма: ₽${Math.round(totalRub).toLocaleString()}`;
+        cartDiv.appendChild(totalDiv);
 
-        let totalDiv = document.getElementById("totalSum");
-        if(!totalDiv){
-            totalDiv = document.createElement("div");
-            totalDiv.id="totalSum";
-            totalDiv.style.fontWeight="bold";
-            totalDiv.style.marginTop="10px";
-            cartDiv.appendChild(totalDiv);
-        }
+        initCustomSelect();
+        initCustomDelivery();
+        updateCount();
+    }
 
-        totalDiv.innerHTML = `💰 Итог: ${total.toLocaleString()} ₽`;
+    function initCustomSelect(){
+        document.querySelectorAll(".custom-select").forEach(select=>{
+            const selected = select.querySelector(".selected");
+            const options = select.querySelector(".options");
+            const index = select.dataset.index;
+
+            selected.onclick = ()=> options.classList.toggle("show");
+
+            options.querySelectorAll(".option").forEach(opt=>{
+                opt.onclick = ()=>{
+                    const color = opt.dataset.color;
+                    cart[index].color = color;
+                    renderCart();
+                }
+            });
+        });
+
+        window.onclick = function(e){
+            if(!e.target.closest(".custom-select")){
+                document.querySelectorAll(".custom-select .options").forEach(opt=>opt.classList.remove("show"));
+            }
+        }
+    }
+
+    function initCustomDelivery(){
+        document.querySelectorAll(".custom-delivery").forEach(delivery=>{
+            const selected = delivery.querySelector(".selected");
+            const options = delivery.querySelector(".options");
+            const index = delivery.dataset.index;
+
+            selected.onclick = ()=> options.classList.toggle("show");
+
+            options.querySelectorAll(".option").forEach(opt=>{
+                opt.onclick = ()=>{
+                    const value = opt.dataset.delivery;
+                    cart[index].delivery = value;
+                    renderCart();
+                }
+            });
+        });
+
+        window.onclick = function(e){
+            if(!e.target.closest(".custom-delivery")){
+                document.querySelectorAll(".custom-delivery .options").forEach(opt=>opt.classList.remove("show"));
+            }
+        }
+    }
+
+    function updateCount(){
+        CATEGORIES.forEach((cat, idx)=>{
+            const count = cart.filter(i=>i.category===cat).length;
+            document.getElementById(`count-${idx}`).textContent = count;
+        });
     }
 
     document.getElementById("sendOrder").addEventListener("click", ()=>{
-        if(cart.length===0){ alert("Корзина пуста!"); return; }
-
-        for(let i=0;i<cart.length;i++){
-            const price=parseFloat(cart[i].price);
-            if(isNaN(price)||price<=0){
-                alert(`Введите корректную цену для "${cart[i].category}"`);
+        if(cart.length === 0){ alert("Корзина пуста!"); return; }
+        // Проверка что все товары заполнены
+        for(let i=0; i<cart.length; i++){
+            const item = cart[i];
+            if(!item.link || !item.price || !item.size){
+                alert(`Пожалуйста, заполните все поля для товара "${item.category}"`);
                 return;
             }
         }
-
-        // Отправка заказа
-        const orderJSON = JSON.stringify(cart, null, 2);
-        console.log("Заказ в JSON:", orderJSON);
-
-        if(window.Telegram?.WebApp?.sendData){
-            Telegram.WebApp.sendData(orderJSON);
-        }
-
-        cart=[];
-        renderCart();
+        sessionStorage.setItem("cart", JSON.stringify(cart));
+        window.location.href = "checkout.html";
     });
 });
