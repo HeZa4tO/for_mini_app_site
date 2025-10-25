@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const checkoutCart = document.getElementById("checkoutCart");
     const totalSumDiv = document.getElementById("totalSum");
     const sendButton = document.getElementById("sendOrder");
+    const formContainer = document.querySelector(".checkout-form");
 
     const RUB_RATE = 13;
     
@@ -54,6 +55,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     totalSumDiv.textContent = `💰 Общая сумма: ₽${Math.ceil(totalRub).toLocaleString()}`;
 
+    // Проверяем среду выполнения и показываем соответствующий интерфейс
+    if (!window.Telegram?.WebApp) {
+        showBrowserInstruction();
+    }
+
     sendButton.addEventListener("click", async () => {
         const fullname = document.getElementById("fullname")?.value.trim() || "";
         const phone = document.getElementById("phone")?.value.trim() || "";
@@ -78,73 +84,111 @@ document.addEventListener("DOMContentLoaded", () => {
                 phone, 
                 city, 
                 address 
-            }
+            },
+            timestamp: new Date().toISOString()
         };
 
         console.log("Отправляемые данные:", orderData);
 
         try {
+            sendButton.disabled = true;
+            sendButton.textContent = "Отправка...";
+
+            // Пытаемся отправить через Telegram WebApp
             if (window.Telegram?.WebApp) {
-                // РЕЖИМ TELEGRAM
-                sendButton.disabled = true;
-                sendButton.textContent = "Отправка...";
-                
                 Telegram.WebApp.sendData(JSON.stringify(orderData));
-                
-                showSuccess("✅ Заказ успешно отправлен! Менеджер свяжется с вами.");
+                showSuccess("✅ Заказ успешно отправлен через Telegram!");
                 
                 setTimeout(() => {
                     Telegram.WebApp.close();
                 }, 2000);
-                
             } else {
-                // ТЕСТОВЫЙ РЕЖИМ - отправляем через функцию
-                sendButton.disabled = true;
-                sendButton.textContent = "Отправка...";
-                
-                const result = await sendOrderToBot(orderData);
-                
-                if (result.success) {
-                    showSuccess("✅ Заказ успешно отправлен! (тестовый режим)");
-                    sessionStorage.removeItem("cart");
-                    
-                    // Очищаем форму
-                    setTimeout(() => {
-                        window.location.href = "index.html";
-                    }, 2000);
-                } else {
-                    throw new Error(result.error || "Ошибка отправки");
-                }
+                // РЕЖИМ БРАУЗЕРА - показываем инструкцию
+                showBrowserInstruction(orderData);
+                sendButton.disabled = false;
+                sendButton.textContent = "📦 Отправить заказ";
             }
         } catch (error) {
             console.error("Ошибка отправки:", error);
-            showError("❌ Не удалось отправить заказ. Попробуйте еще раз или свяжитесь с менеджером.");
+            showError("❌ Не удалось отправить заказ. Попробуйте еще раз.");
             
             sendButton.disabled = false;
             sendButton.textContent = "📦 Отправить заказ";
         }
     });
 
-    // Функция для отправки заказа в тестовом режиме
-    async function sendOrderToBot(orderData) {
-        try {
-            // Сохраняем заказ в localStorage для отладки
-            const testOrders = JSON.parse(localStorage.getItem('test_orders') || '[]');
-            testOrders.push({
-                ...orderData,
-                timestamp: new Date().toISOString()
-            });
-            localStorage.setItem('test_orders', JSON.stringify(testOrders));
-            
-            console.log('✅ Заказ сохранен в localStorage (test_orders):', orderData);
-            
-            // Имитируем успешную отправку
-            return { success: true };
-            
-        } catch (error) {
-            console.error('❌ Ошибка сохранения заказа:', error);
-            return { success: false, error: error.message };
+    // Функция для показа инструкции в браузере
+    function showBrowserInstruction(orderData = null) {
+        const orderText = orderData ? formatOrderForManual(orderData) : "Ваш заказ будет здесь...";
+        
+        const instructionHTML = `
+            <div class="browser-instruction" style="
+                background: #1e1e1e;
+                border: 2px solid #ffeaa7;
+                border-radius: 10px;
+                padding: 20px;
+                margin: 20px 0;
+                text-align: center;
+            ">
+                <h3 style="color: #ffffffff; margin-bottom: 15px;">❌ Открывайте в Telegram!</h3>
+                
+                <p style="margin-bottom: 15px; color: #ffffffff;">
+                    Для оформления заказа откройте этот WebApp в Telegram:
+                </p>
+                
+                <div style="background: #1e1e1e; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                    <strong>1. Откройте Telegram</strong><br>
+                    <strong>2. Найдите бота:</strong> @av_drops_bot<br>
+                    <strong>3. Нажмите "🛒 Открыть магазин"</strong><br>
+                    <strong>4. Добавьте товары и оформите заказ</strong>
+                </div>
+
+                <div style="background: #1e1e1e; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;">
+                    <strong>Ваш заказ:</strong>
+                    <div style="margin-top: 10px; font-family: monospace; font-size: 12px; background: #1e1e1e; padding: 10px; border-radius: 5px;">
+                        ${orderText}
+                    </div>
+                </div>
+
+                <p style="color: #ffffffff; font-size: 14px;">
+                    💡 <strong>Совет:</strong> Сохраните этот текст чтобы отправить менеджеру вручную
+                </p>
+            </div>
+        `;
+
+        // Заменяем форму на инструкцию
+        if (formContainer) {
+            formContainer.style.display = 'none';
         }
+        
+        checkoutCart.innerHTML = instructionHTML;
+        sendButton.style.display = 'none';
+    }
+
+    // Функция для форматирования заказа для ручной отправки
+    function formatOrderForManual(orderData) {
+        const user = orderData.user;
+        const items = orderData.items;
+        
+        let message = `НОВЫЙ ЗАКАЗ\\n\\n`;
+        message += `Клиент: ${user.fullname}\\n`;
+        message += `Телефон: ${user.phone}\\n`;
+        message += `Адрес: ${user.city}, ${user.address}\\n\\n`;
+        
+        message += `ТОВАРЫ:\\n`;
+        items.forEach((item, index) => {
+            message += `${index + 1}. ${item.category}\\n`;
+            message += `   Цена: ¥${item.price}\\n`;
+            message += `   Размер: ${item.size}\\n`;
+            message += `   Цвет: ${item.color}\\n`;
+            message += `   Доставка: ${item.delivery}\\n`;
+            message += `   Ссылка: ${item.link}\\n\\n`;
+        });
+        
+        message += `ОБЩАЯ СУММА: ₽${orderData.total.toLocaleString()}\\n`;
+        message += `ВРЕМЯ: ${new Date().toLocaleString()}`;
+        
+        return message;
     }
 
     // Функция для показа ошибок
@@ -224,6 +268,15 @@ document.addEventListener("DOMContentLoaded", () => {
         button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+        }
+
+        .browser-instruction {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     `;
     document.head.appendChild(style);
