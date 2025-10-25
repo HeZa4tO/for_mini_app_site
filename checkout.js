@@ -54,20 +54,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     totalSumDiv.textContent = `💰 Общая сумма: ₽${Math.ceil(totalRub).toLocaleString()}`;
 
-    sendButton.addEventListener("click", () => {
+    sendButton.addEventListener("click", async () => {
         const fullname = document.getElementById("fullname")?.value.trim() || "";
         const phone = document.getElementById("phone")?.value.trim() || "";
         const city = document.getElementById("city")?.value.trim() || "";
         const address = document.getElementById("address")?.value.trim() || "";
 
         if (!fullname || !phone || !city || !address) {
-            alert("Пожалуйста, заполните все поля!");
+            showError("Пожалуйста, заполните все поля формы!");
             return;
         }
 
-        // ПРАВИЛЬНАЯ структура данных для бота
+        if (cart.length === 0) {
+            showError("Корзина пуста! Добавьте товары перед оформлением заказа.");
+            return;
+        }
+
         const orderData = {
-            items: cart,  // массив товаров
+            items: cart,
             total: totalRub,
             user: { 
                 fullname, 
@@ -81,23 +85,146 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             if (window.Telegram?.WebApp) {
-                // Отправка данных в бота
+                // РЕЖИМ TELEGRAM
+                sendButton.disabled = true;
+                sendButton.textContent = "Отправка...";
+                
                 Telegram.WebApp.sendData(JSON.stringify(orderData));
                 
-                // Закрытие WebApp
+                showSuccess("✅ Заказ успешно отправлен! Менеджер свяжется с вами.");
+                
                 setTimeout(() => {
                     Telegram.WebApp.close();
-                }, 1000);
+                }, 2000);
                 
             } else {
-                // Для тестирования вне Telegram
-                console.log("Тестовые данные:", orderData);
-                alert("✅ Заказ сохранён (тестовый режим)");
-                sessionStorage.setItem("lastOrder", JSON.stringify(orderData));
+                // ТЕСТОВЫЙ РЕЖИМ - отправляем через функцию
+                sendButton.disabled = true;
+                sendButton.textContent = "Отправка...";
+                
+                const result = await sendOrderToBot(orderData);
+                
+                if (result.success) {
+                    showSuccess("✅ Заказ успешно отправлен! (тестовый режим)");
+                    sessionStorage.removeItem("cart");
+                    
+                    // Очищаем форму
+                    setTimeout(() => {
+                        window.location.href = "index.html";
+                    }, 2000);
+                } else {
+                    throw new Error(result.error || "Ошибка отправки");
+                }
             }
         } catch (error) {
             console.error("Ошибка отправки:", error);
-            alert("❌ Не удалось отправить заказ. Попробуйте снова.");
+            showError("❌ Не удалось отправить заказ. Попробуйте еще раз или свяжитесь с менеджером.");
+            
+            sendButton.disabled = false;
+            sendButton.textContent = "📦 Отправить заказ";
         }
     });
+
+    // Функция для отправки заказа в тестовом режиме
+    async function sendOrderToBot(orderData) {
+        try {
+            // Сохраняем заказ в localStorage для отладки
+            const testOrders = JSON.parse(localStorage.getItem('test_orders') || '[]');
+            testOrders.push({
+                ...orderData,
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem('test_orders', JSON.stringify(testOrders));
+            
+            console.log('✅ Заказ сохранен в localStorage (test_orders):', orderData);
+            
+            // Имитируем успешную отправку
+            return { success: true };
+            
+        } catch (error) {
+            console.error('❌ Ошибка сохранения заказа:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    // Функция для показа ошибок
+    function showError(message) {
+        const errorDiv = document.createElement("div");
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff4757;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-weight: 500;
+            max-width: 90%;
+            text-align: center;
+            animation: slideDown 0.3s ease;
+        `;
+        errorDiv.textContent = message;
+        
+        document.body.appendChild(errorDiv);
+        
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.parentNode.removeChild(errorDiv);
+            }
+        }, 5000);
+    }
+
+    // Функция для успешных сообщений
+    function showSuccess(message) {
+        const successDiv = document.createElement("div");
+        successDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2ed573;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-weight: 500;
+            max-width: 90%;
+            text-align: center;
+            animation: slideDown 0.3s ease;
+        `;
+        successDiv.textContent = message;
+        
+        document.body.appendChild(successDiv);
+        
+        setTimeout(() => {
+            if (successDiv.parentNode) {
+                successDiv.parentNode.removeChild(successDiv);
+            }
+        }, 5000);
+    }
+
+    // CSS анимация
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideDown {
+            from {
+                transform: translateX(-50%) translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    `;
+    document.head.appendChild(style);
 });
