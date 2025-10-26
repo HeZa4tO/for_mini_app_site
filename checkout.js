@@ -22,9 +22,15 @@ document.addEventListener("DOMContentLoaded", () => {
         "📦 Другое": {"Обычная 🚚": 1500, "Экспресс 🚀": 5000}
     };
 
-    // Надежная проверка Telegram WebApp
+    // НАДЕЖНАЯ проверка Telegram WebApp
     const isTelegramWebApp = () => {
-        return !!(window.Telegram && Telegram.WebApp && Telegram.WebApp.initData);
+        // Проверяем несколько признаков Telegram WebApp
+        if (typeof window.Telegram === 'undefined') return false;
+        if (!window.Telegram.WebApp) return false;
+        
+        // Telegram WebApp всегда имеет platform и version
+        const webApp = window.Telegram.WebApp;
+        return !!(webApp.platform && webApp.version);
     };
 
     let totalRub = 0;
@@ -63,7 +69,8 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("🔍 Проверка окружения:");
     console.log("Telegram:", !!window.Telegram);
     console.log("Telegram.WebApp:", !!window.Telegram?.WebApp);
-    console.log("Telegram.WebApp.initData:", !!window.Telegram?.WebApp?.initData);
+    console.log("Telegram.WebApp.platform:", window.Telegram?.WebApp?.platform);
+    console.log("Telegram.WebApp.version:", window.Telegram?.WebApp?.version);
     console.log("Режим:", isTelegramWebApp() ? "TELEGRAM" : "BROWSER");
 
     // Показываем соответствующий интерфейс
@@ -91,8 +98,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const formData = getFormData();
         if (!formData.valid) return;
 
+        // Добавляем расчет доставки в рублях для каждого товара
+        const itemsWithDelivery = cart.map(item => {
+            const deliveryPrice = DELIVERY_PRICES[item.category]?.[item.delivery] || 2000;
+            return {
+                ...item,
+                delivery_rub: deliveryPrice
+            };
+        });
+
         const orderData = {
-            items: cart,
+            items: itemsWithDelivery,
             total: totalRub,
             user: formData.user,
             timestamp: new Date().toISOString(),
@@ -124,8 +140,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const formData = getFormData();
         if (!formData.valid) return;
 
+        // Добавляем расчет доставки в рублях для каждого товара
+        const itemsWithDelivery = cart.map(item => {
+            const deliveryPrice = DELIVERY_PRICES[item.category]?.[item.delivery] || 2000;
+            return {
+                ...item,
+                delivery_rub: deliveryPrice
+            };
+        });
+
         const orderData = {
-            items: cart,
+            items: itemsWithDelivery,
             total: totalRub,
             user: formData.user,
             timestamp: new Date().toISOString(),
@@ -206,23 +231,35 @@ document.addEventListener("DOMContentLoaded", () => {
         const user = orderData.user;
         const items = orderData.items;
         
-        let message = `🛒 НОВЫЙ ЗАКАЗ\n\n`;
+        let message = `🛒 НОВЫЙ ЗАКАЗ ИЗ БРАУЗЕРА\n\n`;
         message += `👤 Клиент: ${user.fullname}\n`;
         message += `📞 Телефон: ${user.phone}\n`;
         message += `🏠 Адрес: ${user.city}, ${user.address}\n\n`;
         
         message += `📦 ТОВАРЫ:\n`;
+        
+        const RUB_RATE = 13;
+        
         items.forEach((item, index) => {
+            const priceYuan = Number(item.price || 1);
+            const priceRub = Math.ceil(priceYuan * RUB_RATE);
+            const deliveryPrice = DELIVERY_PRICES[item.category]?.[item.delivery] || 2000;
+            const deliveryRub = Math.ceil(deliveryPrice);
+            const taxRub = Math.ceil(priceRub * 0.1);
+            
             message += `${index + 1}. ${item.category}\n`;
-            message += `   💰 Цена: ¥${item.price}\n`;
+            message += `   💰 Цена товара: ¥${item.price}\n`;
+            message += `   🚚 Стоимость доставки: ¥${Math.ceil(deliveryPrice / RUB_RATE)}\n`;
+            message += `   💰 Комиссия: ¥${Math.ceil(taxRub / RUB_RATE)}\n`;
             message += `   📏 Размер: ${item.size}\n`;
             message += `   🎨 Цвет: ${item.color}\n`;
             message += `   🚚 Доставка: ${item.delivery}\n`;
             message += `   🔗 Ссылка: ${item.link}\n\n`;
         });
         
-        message += `💰 ОБЩАЯ СУММА: ₽${orderData.total.toLocaleString()}\n`;
-        message += `⏰ ВРЕМЯ: ${new Date().toLocaleString()}`;
+        message += `💰 Общая сумма: ₽${orderData.total.toLocaleString()}\n`;
+        message += `⏰ Время: ${new Date().toLocaleString()}\n`;
+        message += `🌐 Источник: Браузер`;
         
         return message;
     }
