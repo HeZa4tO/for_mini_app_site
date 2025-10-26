@@ -1,4 +1,97 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // ==================== СИСТЕМА ЛОГИРОВАНИЯ ====================
+    // Создаем контейнер для логов
+    const logContainer = document.createElement('div');
+    logContainer.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        width: 350px;
+        height: 250px;
+        background: rgba(0,0,0,0.9);
+        color: #00ff00;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        padding: 10px;
+        overflow-y: auto;
+        z-index: 9999;
+        border: 2px solid #1e1e1e;
+        border-radius: 8px;
+        display: none;
+        line-height: 1.3;
+    `;
+    logContainer.id = 'debug-log-container';
+    document.body.appendChild(logContainer);
+
+    // Функция для вывода логов на экран
+    function showLog(message) {
+        const originalConsoleLog = console.log;
+        originalConsoleLog(message);
+        
+        const logEntry = document.createElement('div');
+        logEntry.style.cssText = `
+            margin-bottom: 4px;
+            border-bottom: 1px solid #1e1e1e;
+            padding-bottom: 4px;
+        `;
+        logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    // Кнопка для показа/скрытия логов
+    const toggleLogsBtn = document.createElement('button');
+    toggleLogsBtn.textContent = '📋 Логи';
+    toggleLogsBtn.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 10000;
+        padding: 8px 12px;
+        background: #1e1e1e;
+        color: white;
+        border: 2px solid #1e1e1e;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+    `;
+    toggleLogsBtn.onclick = () => {
+        const isVisible = logContainer.style.display === 'block';
+        logContainer.style.display = isVisible ? 'none' : 'block';
+        toggleLogsBtn.textContent = isVisible ? '📋 Логи' : '❌ Закрыть';
+        toggleLogsBtn.style.background = isVisible ? '#1e1e1e' : '#ff4757';
+    };
+    document.body.appendChild(toggleLogsBtn);
+
+    // Индикатор статуса Telegram
+    const statusDiv = document.createElement('div');
+    statusDiv.style.cssText = `
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: #1e1e1e;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: bold;
+        z-index: 10000;
+        border: 2px solid #1e1e1e;
+    `;
+    statusDiv.id = 'telegram-status';
+    document.body.appendChild(statusDiv);
+
+    // Переопределяем console.log для автоматического логирования
+    const originalConsoleLog = console.log;
+    console.log = function(...args) {
+        originalConsoleLog.apply(console, args);
+        showLog(args.map(arg => 
+            typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+        ).join(' '));
+    };
+
+    // ==================== ОСНОВНОЙ КОД ====================
     const cart = JSON.parse(sessionStorage.getItem("cart") || "[]");
     const checkoutCart = document.getElementById("checkoutCart");
     const totalSumDiv = document.getElementById("totalSum");
@@ -30,16 +123,17 @@ document.addEventListener("DOMContentLoaded", () => {
         
         if (window.Telegram?.WebApp) {
             const webApp = Telegram.WebApp;
-            console.log("initData:", webApp.initData);
-            console.log("initDataUnsafe:", webApp.initDataUnsafe);
+            console.log("initData:", webApp.initData ? "ЕСТЬ" : "НЕТ");
+            console.log("initDataUnsafe:", webApp.initDataUnsafe ? "ЕСТЬ" : "НЕТ");
             console.log("platform:", webApp.platform);
             console.log("version:", webApp.version);
             console.log("colorScheme:", webApp.colorScheme);
             console.log("themeParams:", webApp.themeParams);
             console.log("isExpanded:", webApp.isExpanded);
             console.log("viewportHeight:", webApp.viewportHeight);
-            console.log("MainButton:", webApp.MainButton);
+            console.log("MainButton:", webApp.MainButton ? "ДОСТУПЕН" : "НЕТ");
         }
+        console.log("User Agent:", navigator.userAgent);
         console.log("=== END DEBUG ===");
     }
 
@@ -127,15 +221,21 @@ document.addEventListener("DOMContentLoaded", () => {
     // Ждем немного для инициализации Telegram WebApp (иногда он грузится с задержкой)
     setTimeout(() => {
         console.log("🔍 Окончательная проверка окружения:");
-        console.log("window.Telegram:", !!window.Telegram);
-        console.log("window.Telegram.WebApp:", !!window.Telegram?.WebApp);
-        console.log("initData:", !!window.Telegram?.WebApp?.initData);
-        console.log("platform:", window.Telegram?.WebApp?.platform);
-        console.log("version:", window.Telegram?.WebApp?.version);
-        console.log("User Agent:", navigator.userAgent);
         
         const isTelegram = isTelegramWebApp();
         console.log("🏁 ФИНАЛЬНЫЙ РЕЖИМ:", isTelegram ? "TELEGRAM" : "BROWSER");
+
+        // Обновляем индикатор статуса
+        const statusElement = document.getElementById('telegram-status');
+        if (isTelegram) {
+            statusElement.textContent = '✅ Telegram Mode';
+            statusElement.style.background = '#1e1e1e';
+            statusElement.style.borderColor = '#1e1e1e';
+        } else {
+            statusElement.textContent = '❌ Browser Mode';
+            statusElement.style.background = '#ff4757';
+            statusElement.style.borderColor = '#ff4757';
+        }
 
         // Вызываем отладку
         debugTelegramWebApp();
@@ -187,8 +287,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function handleTelegramSubmit() {
+        console.log("🟡 1. Начало отправки заказа");
+        
         const formData = getFormData();
-        if (!formData.valid) return;
+        if (!formData.valid) {
+            console.log("🔴 2. Форма не валидна");
+            return;
+        }
+        
+        console.log("🟢 3. Форма валидна, готовим данные");
 
         // Добавляем расчет доставки в рублях для каждого товара
         const itemsWithDelivery = cart.map(item => {
@@ -207,7 +314,7 @@ document.addEventListener("DOMContentLoaded", () => {
             source: 'telegram'
         };
 
-        console.log("📦 Отправка через Telegram:", orderData);
+        console.log("📦 Данные для отправки:", orderData);
 
         try {
             // Показываем индикатор загрузки
@@ -228,10 +335,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.warn("⚠️ initData пустой, но пытаемся отправить");
             }
 
+            console.log("🔵 4. Пытаемся отправить через Telegram WebApp");
+            
             // Отправляем данные
             Telegram.WebApp.sendData(JSON.stringify(orderData));
             
-            console.log("✅ Данные отправлены в Telegram");
+            console.log("✅ 5. Данные отправлены в Telegram");
             showSuccess("✅ Заказ успешно отправлен!");
             
             // Даем время увидеть сообщение об успехе
@@ -242,7 +351,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 1500);
 
         } catch (error) {
-            console.error("❌ Ошибка отправки в Telegram:", error);
+            console.error("❌ 6. Ошибка отправки в Telegram:", error);
             
             // Показываем детальную ошибку
             let errorMessage = "❌ Ошибка отправки. ";
@@ -281,7 +390,7 @@ document.addEventListener("DOMContentLoaded", () => {
             items: itemsWithDelivery,
             total: totalRub,
             user: formData.user,
-            timestamp: new Date().toISOString(),
+            timestamp: new Date().toLocaleString(),
             source: 'browser'
         };
 
@@ -393,6 +502,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showError(message) {
+        console.error("❌ Ошибка:", message);
         const errorDiv = document.createElement("div");
         errorDiv.style.cssText = `
             position: fixed;
@@ -420,6 +530,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showSuccess(message) {
+        console.log("✅ Успех:", message);
         const successDiv = document.createElement("div");
         successDiv.style.cssText = `
             position: fixed;
@@ -477,6 +588,22 @@ document.addEventListener("DOMContentLoaded", () => {
         .order-text:hover {
             background: #1e1e1e !important;
         }
+        
+        /* Стили для контейнера логов */
+        #debug-log-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        #debug-log-container::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        #debug-log-container::-webkit-scrollbar-thumb {
+            background: #1e1e1e;
+            border-radius: 3px;
+        }
     `;
     document.head.appendChild(style);
+
+    // Начальное сообщение
+    console.log("🚀 Приложение загружено!");
+    console.log("💡 Нажмите кнопку '📋 Логи' в правом верхнем углу для просмотра логов");
 });
