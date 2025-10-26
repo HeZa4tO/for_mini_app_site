@@ -45,13 +45,40 @@ document.addEventListener("DOMContentLoaded", () => {
         "📦 Другое": {"Обычная 🚚": 1500, "Экспресс 🚀": 5000}
     };
 
-    // НАДЕЖНАЯ проверка Telegram WebApp
+    // УЛУЧШЕННАЯ проверка Telegram WebApp
     const isTelegramWebApp = () => {
+        console.log("🔍 Проверка Telegram WebApp...");
+        
+        // Основная проверка
         if (window.Telegram && window.Telegram.WebApp) {
             const webApp = window.Telegram.WebApp;
-            return !!(webApp.initData || webApp.initDataUnsafe || webApp.platform || webApp.version);
+            console.log("📱 Telegram WebApp обнаружен:", {
+                initData: !!webApp.initData,
+                initDataUnsafe: !!webApp.initDataUnsafe,
+                platform: webApp.platform,
+                version: webApp.version
+            });
+            
+            // Если есть initData или platform - это точно Telegram
+            if (webApp.initData || webApp.platform) {
+                console.log("✅ Telegram WebApp подтвержден");
+                return true;
+            }
         }
-        return false;
+        
+        // Дополнительные проверки
+        const userAgent = navigator.userAgent.toLowerCase();
+        const isTelegramUserAgent = userAgent.includes('telegram') || userAgent.includes('webapp');
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasTelegramParams = urlParams.has('tgWebAppData') || urlParams.has('tgWebAppVersion');
+        
+        console.log("📱 Дополнительные проверки:", {
+            userAgent: isTelegramUserAgent,
+            urlParams: hasTelegramParams
+        });
+        
+        return isTelegramUserAgent || hasTelegramParams;
     };
 
     // Отображаем товары в корзине
@@ -90,42 +117,49 @@ document.addEventListener("DOMContentLoaded", () => {
     // Инициализация обработчиков
     setTimeout(() => {
         const isTelegram = isTelegramWebApp();
-        console.log("🏁 Режим:", isTelegram ? "TELEGRAM" : "BROWSER");
+        console.log("🏁 ФИНАЛЬНЫЙ РЕЖИМ:", isTelegram ? "TELEGRAM" : "BROWSER");
 
         if (isTelegram) {
+            console.log("🟢 Запускаем Telegram режим");
             setupTelegramMode();
         } else {
+            console.log("🟡 Запускаем Browser режим");
             setupBrowserMode();
         }
-
-        // ФИНАЛЬНАЯ ПРОВЕРКА ОБРАБОТЧИКА
-        console.log("✅ Обработчик установлен:", !!sendButton.onclick);
     }, 100);
 
     function setupTelegramMode() {
         console.log("🟢 Настройка Telegram режима");
+        
+        // Обязательно показываем нашу кнопку
+        sendButton.style.display = 'block';
         sendButton.textContent = "📦 Отправить заказ в Telegram";
         
         if (window.Telegram && window.Telegram.WebApp) {
             try {
+                console.log("🔧 Инициализация Telegram WebApp...");
                 Telegram.WebApp.ready();
                 Telegram.WebApp.expand();
                 
-                // Используем MainButton Telegram
-                Telegram.WebApp.MainButton.setText("📦 ОТПРАВИТЬ ЗАКАЗ");
-                Telegram.WebApp.MainButton.show();
-                Telegram.WebApp.MainButton.onClick(handleTelegramSubmit);
+                console.log("✅ Telegram WebApp инициализирован");
                 
-                sendButton.style.display = 'none';
+                // Пробуем использовать MainButton, но не скрываем нашу кнопку
+                try {
+                    Telegram.WebApp.MainButton.setText("📦 ОТПРАВИТЬ ЗАКАЗ");
+                    Telegram.WebApp.MainButton.show();
+                    Telegram.WebApp.MainButton.onClick(handleTelegramSubmit);
+                    console.log("✅ MainButton активирована");
+                } catch (mainButtonError) {
+                    console.warn("⚠️ MainButton не работает:", mainButtonError);
+                }
                 
             } catch (error) {
-                console.error("Ошибка Telegram, используем стандартную кнопку:", error);
-                sendButton.style.display = 'block';
-                setupButtonHandler(handleTelegramSubmit);
+                console.error("❌ Ошибка инициализации Telegram:", error);
             }
-        } else {
-            setupButtonHandler(handleTelegramSubmit);
         }
+        
+        // ВСЕГДА устанавливаем обработчик на нашу кнопку
+        setupButtonHandler(handleTelegramSubmit);
     }
 
     function setupBrowserMode() {
@@ -136,40 +170,51 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ДЛЯ НАСТРОЙКИ ОБРАБОТЧИКА
     function setupButtonHandler(handler) {
+        console.log("🔧 Установка обработчика на кнопку...");
+        
         // Очищаем все старые обработчики
         sendButton.onclick = null;
-        sendButton.replaceWith(sendButton.cloneNode(true));
         
-        // Переполучаем кнопку после клонирования
-        sendButton = document.getElementById("sendOrder") || 
-                    Array.from(document.querySelectorAll('button')).find(btn => 
-                        btn.textContent.includes('Отправить') || 
-                        btn.textContent.includes('Оформить') ||
-                        btn.textContent.includes('заказ')
-                    );
-
-        if (!sendButton) {
-            console.error("❌ Кнопка не найдена после клонирования");
-            return;
-        }
+        // Удаляем все event listeners
+        const newButton = sendButton.cloneNode(true);
+        sendButton.parentNode.replaceChild(newButton, sendButton);
+        sendButton = newButton;
 
         // Устанавливаем новые обработчики
-        sendButton.onclick = handler;
-        sendButton.addEventListener('click', handler, true);
+        sendButton.onclick = function(e) {
+            console.log("🎯 КНОПКА НАЖАТА!");
+            e.preventDefault();
+            e.stopPropagation();
+            handler.call(this, e);
+        };
+        
+        // Дублируем через addEventListener
+        sendButton.addEventListener('click', function(e) {
+            console.log("🎯 addEventListener: Кнопка нажата!");
+            e.preventDefault();
+            e.stopPropagation();
+            handler.call(this, e);
+        }, true);
         
         // Снимаем возможные блокировки
         sendButton.disabled = false;
         sendButton.style.pointerEvents = 'auto';
         sendButton.style.opacity = '1';
+        sendButton.style.display = 'block';
 
         console.log("✅ Обработчик установлен на кнопку:", sendButton.textContent);
     }
 
     async function handleTelegramSubmit() {
-        console.log("🟡 Начало отправки заказа в Telegram");
+        console.log("🟡 НАЧАЛО ОТПРАВКИ В TELEGRAM");
         
         const formData = getFormData();
-        if (!formData.valid) return;
+        if (!formData.valid) {
+            console.log("🔴 Форма не валидна");
+            return;
+        }
+
+        console.log("🟢 Форма валидна, готовим данные...");
 
         const itemsWithDelivery = cart.map(item => {
             const deliveryPrice = DELIVERY_PRICES[item.category]?.[item.delivery] || 2000;
@@ -187,41 +232,37 @@ document.addEventListener("DOMContentLoaded", () => {
             source: 'telegram'
         };
 
+        console.log("📦 Данные для отправки:", orderData);
+
         try {
-            // Показываем индикатор загрузки
-            if (Telegram.WebApp.MainButton && Telegram.WebApp.MainButton.isVisible) {
-                Telegram.WebApp.MainButton.showProgress();
-            } else {
-                sendButton.disabled = true;
-                sendButton.textContent = "Отправка...";
-            }
+            console.log("🔄 Показываем индикатор загрузки...");
+            sendButton.disabled = true;
+            sendButton.textContent = "Отправка...";
 
             if (!window.Telegram?.WebApp) {
                 throw new Error("Telegram WebApp не доступен");
             }
 
+            console.log("📤 Отправляем данные через Telegram WebApp...");
             Telegram.WebApp.sendData(JSON.stringify(orderData));
             
+            console.log("✅ Данные отправлены!");
             showSuccess("✅ Заказ успешно отправлен!");
             
             setTimeout(() => {
+                console.log("🔒 Закрываем приложение...");
                 if (window.Telegram?.WebApp?.close) {
                     Telegram.WebApp.close();
                 }
-            }, 1500);
+            }, 2000);
 
         } catch (error) {
-            console.error("❌ Ошибка отправки:", error);
+            console.error("❌ ОШИБКА ОТПРАВКИ:", error);
             
-            let errorMessage = "❌ Ошибка отправки. Попробуйте еще раз.";
-            showError(errorMessage);
+            showError("❌ Ошибка отправки. Попробуйте еще раз.");
             
-            if (Telegram.WebApp.MainButton && Telegram.WebApp.MainButton.isVisible) {
-                Telegram.WebApp.MainButton.hideProgress();
-            } else {
-                sendButton.disabled = false;
-                sendButton.textContent = "📦 Отправить заказ в Telegram";
-            }
+            sendButton.disabled = false;
+            sendButton.textContent = "📦 Отправить заказ в Telegram";
         }
     }
 
@@ -250,10 +291,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function getFormData() {
+        console.log("🔍 Проверка полей формы...");
+        
         const fullname = document.getElementById("fullname")?.value.trim() || "";
         const phone = document.getElementById("phone")?.value.trim() || "";
         const city = document.getElementById("city")?.value.trim() || "";
         const address = document.getElementById("address")?.value.trim() || "";
+
+        console.log("📝 Данные формы:", { fullname, phone, city, address });
 
         if (!fullname || !phone || !city || !address) {
             showError("Пожалуйста, заполните все поля формы!");
@@ -265,6 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return { valid: false };
         }
 
+        console.log("🟢 Все проверки пройдены");
         return {
             valid: true,
             user: { fullname, phone, city, address }
@@ -272,45 +318,264 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showBrowserInstruction(orderData) {
+        console.log("🟡 Показываем инструкцию для браузера");
         const orderText = formatOrderForManual(orderData);
         
         const instructionHTML = `
-            <div class="browser-instruction">
-                <h3>❌ Открывайте в Telegram!</h3>
-                
-                <div class="instruction-steps">
-                    <p><strong>Для оформления заказа:</strong></p>
-                    <ol>
-                        <li>Откройте Telegram</li>
-                        <li>Найдите бота: <strong>@av_drops_bot</strong></li>
-                        <li>Нажмите <strong>"🛒 Открыть магазин"</strong></li>
-                        <li>Добавьте товары и оформите заказ</li>
-                    </ol>
+            <div class="browser-instruction" style="
+                max-width: 500px;
+                margin: 20px auto;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 20px;
+                padding: 30px;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                color: white;
+                font-family: 'Segoe UI', system-ui, sans-serif;
+            ">
+                <!-- Заголовок -->
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">📱</div>
+                    <h2 style="margin: 0; font-size: 24px; font-weight: 700;">Откройте в Telegram</h2>
+                    <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Для быстрого оформления заказа</p>
                 </div>
 
-                <div class="order-summary">
-                    <strong>Ваш заказ для ручной отправки:</strong>
-                    <div class="order-text" onclick="copyOrderText(this)">
+                <!-- Шаги -->
+                <div style="
+                    background: rgba(255,255,255,0.1);
+                    backdrop-filter: blur(10px);
+                    border-radius: 15px;
+                    padding: 25px;
+                    margin-bottom: 25px;
+                ">
+                    <div style="
+                        display: flex;
+                        align-items: center;
+                        margin-bottom: 20px;
+                        padding-bottom: 15px;
+                        border-bottom: 1px solid rgba(255,255,255,0.2);
+                    ">
+                        <div style="font-size: 24px; margin-right: 15px;">👆</div>
+                        <div>
+                            <h3 style="margin: 0; font-size: 18px; font-weight: 600;">4 простых шага</h3>
+                            <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">и ваш заказ готов!</p>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; gap: 15px;">
+                        <div style="display: flex; align-items: flex-start; gap: 15px;">
+                            <div style="
+                                background: rgba(255,255,255,0.2);
+                                border-radius: 50%;
+                                width: 30px;
+                                height: 30px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-weight: bold;
+                                font-size: 14px;
+                                flex-shrink: 0;
+                            ">1</div>
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 2px;">Откройте Telegram</div>
+                                <div style="font-size: 14px; opacity: 0.9;">Запустите приложение Telegram на вашем устройстве</div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: flex-start; gap: 15px;">
+                            <div style="
+                                background: rgba(255,255,255,0.2);
+                                border-radius: 50%;
+                                width: 30px;
+                                height: 30px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-weight: bold;
+                                font-size: 14px;
+                                flex-shrink: 0;
+                            ">2</div>
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 2px;">Найдите нашего бота</div>
+                                <div style="font-size: 14px; opacity: 0.9;">В поиске введите: <strong style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 6px; font-family: monospace;">@av_drops_bot</strong></div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: flex-start; gap: 15px;">
+                            <div style="
+                                background: rgba(255,255,255,0.2);
+                                border-radius: 50%;
+                                width: 30px;
+                                height: 30px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-weight: bold;
+                                font-size: 14px;
+                                flex-shrink: 0;
+                            ">3</div>
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 2px;">Откройте магазин</div>
+                                <div style="font-size: 14px; opacity: 0.9;">Нажмите кнопку <strong>"🛒 Открыть магазин"</strong> в меню бота</div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: flex-start; gap: 15px;">
+                            <div style="
+                                background: rgba(255,255,255,0.2);
+                                border-radius: 50%;
+                                width: 30px;
+                                height: 30px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-weight: bold;
+                                font-size: 14px;
+                                flex-shrink: 0;
+                            ">4</div>
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 2px;">Оформите заказ</div>
+                                <div style="font-size: 14px; opacity: 0.9;">Добавьте товары и завершите оформление</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ваш заказ -->
+                <div style="
+                    background: rgba(255,255,255,0.1);
+                    backdrop-filter: blur(10px);
+                    border-radius: 15px;
+                    padding: 20px;
+                    margin-bottom: 20px;
+                ">
+                    <div style="
+                        display: flex;
+                        align-items: center;
+                        margin-bottom: 15px;
+                        gap: 10px;
+                    ">
+                        <div style="font-size: 20px;">📋</div>
+                        <div style="font-weight: 600; font-size: 16px;">Ваш заказ для ручной отправки</div>
+                    </div>
+                    
+                    <div class="order-text" onclick="copyOrderText(this)" style="
+                        background: rgba(0,0,0,0.3);
+                        border: 1px solid rgba(255,255,255,0.2);
+                        border-radius: 10px;
+                        padding: 15px;
+                        font-family: 'Courier New', monospace;
+                        font-size: 12px;
+                        line-height: 1.4;
+                        color: #fff;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        max-height: 200px;
+                        overflow-y: auto;
+                        margin-bottom: 10px;
+                    " onmouseover="this.style.background='rgba(255,255,255,0.1)'" 
+                    onmouseout="this.style.background='rgba(0,0,0,0.3)'">
                         ${orderText}
                     </div>
-                    <small>💡 Нажмите на текст чтобы скопировать</small>
+                    
+                    <div style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        font-size: 12px;
+                        opacity: 0.8;
+                    ">
+                        <div>💡</div>
+                        <div>Нажмите на текст чтобы скопировать заказ</div>
+                    </div>
                 </div>
 
-                <div class="contact-info">
-                    <p>Или отправьте этот текст менеджеру:</p>
-                    <a href="https://t.me/av_manage" target="_blank" class="manager-link">
-                        📩 Написать менеджеру
+                <!-- Кнопки действий -->
+                <div style="display: grid; gap: 12px;">
+                    <a href="https://t.me/av_drops_bot" target="_blank" style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 10px;
+                        background: rgba(255,255,255,0.2);
+                        border: 1px solid rgba(255,255,255,0.3);
+                        border-radius: 12px;
+                        padding: 15px 20px;
+                        color: white;
+                        text-decoration: none;
+                        font-weight: 600;
+                        transition: all 0.3s ease;
+                        text-align: center;
+                    " onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.transform='translateY(-2px)'" 
+                    onmouseout="this.style.background='rgba(255,255,255,0.2)'; this.style.transform='translateY(0)'">
+                        <span>🚀</span>
+                        <span>Перейти в бота @av_drops_bot</span>
                     </a>
+
+                    <a href="https://t.me/av_manage" target="_blank" style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 10px;
+                        background: linear-gradient(135deg, #1e1e1e, #2d2d2d);
+                        border: none;
+                        border-radius: 12px;
+                        padding: 15px 20px;
+                        color: white;
+                        text-decoration: none;
+                        font-weight: 600;
+                        transition: all 0.3s ease;
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 20px rgba(0,0,0,0.2)'" 
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        <span>💬</span>
+                        <span>Написать менеджеру</span>
+                    </a>
+
+                    <button onclick="location.reload()" style="
+                        background: rgba(255,255,255,0.9);
+                        border: none;
+                        border-radius: 12px;
+                        padding: 15px 20px;
+                        color: #667eea;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        font-size: 14px;
+                    " onmouseover="this.style.background='#fff'; this.style.transform='translateY(-2px)'" 
+                    onmouseout="this.style.background='rgba(255,255,255,0.9)'; this.style.transform='translateY(0)'">
+                        🔄 Начать новый заказ
+                    </button>
                 </div>
 
-                <button onclick="location.reload()">
-                    🔄 Новый заказ
-                </button>
+                <!-- Футер -->
+                <div style="
+                    text-align: center;
+                    margin-top: 25px;
+                    padding-top: 20px;
+                    border-top: 1px solid rgba(255,255,255,0.2);
+                    font-size: 12px;
+                    opacity: 0.7;
+                ">
+                    <div style="margin-bottom: 5px;">💡 Открывайте в Telegram для быстрого оформления</div>
+                    <div>⏱️ Экономьте время с автоматической отправкой заказа</div>
+                </div>
             </div>
         `;
 
         const mainContent = document.querySelector("main") || document.querySelector(".container") || document.body;
         mainContent.innerHTML = instructionHTML;
+        
+        // Добавляем анимацию появления
+        const instructionElement = mainContent.querySelector('.browser-instruction');
+        if (instructionElement) {
+            instructionElement.style.opacity = '0';
+            instructionElement.style.transform = 'translateY(20px)';
+            instructionElement.style.transition = 'all 0.5s ease';
+            
+            setTimeout(() => {
+                instructionElement.style.opacity = '1';
+                instructionElement.style.transform = 'translateY(0)';
+            }, 100);
+        }
     }
 
     function formatOrderForManual(orderData) {
@@ -351,61 +616,111 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showError(message) {
+        console.error("❌ Ошибка:", message);
         const errorDiv = document.createElement("div");
         errorDiv.style.cssText = `
             position: fixed;
             top: 20px;
             left: 50%;
-            transform: translateX(-50%);
-            background: #ff4757;
+            transform: translateX(-50%) translateY(-20px);
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
             color: white;
-            padding: 15px 20px;
-            border-radius: 10px;
+            padding: 15px 25px;
+            border-radius: 12px;
             z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             font-weight: 500;
             max-width: 90%;
             text-align: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+            border-left: 4px solid #ff4757;
         `;
         errorDiv.textContent = message;
         document.body.appendChild(errorDiv);
-        setTimeout(() => errorDiv.remove(), 5000);
+        
+        // Анимация появления
+        setTimeout(() => {
+            errorDiv.style.opacity = '1';
+            errorDiv.style.transform = 'translateX(-50%) translateY(0)';
+        }, 10);
+        
+        setTimeout(() => {
+            errorDiv.style.opacity = '0';
+            errorDiv.style.transform = 'translateX(-50%) translateY(-20px)';
+            setTimeout(() => {
+                if (errorDiv.parentNode) {
+                    errorDiv.parentNode.removeChild(errorDiv);
+                }
+            }, 300);
+        }, 5000);
     }
 
     function showSuccess(message) {
+        console.log("✅ Успех:", message);
         const successDiv = document.createElement("div");
         successDiv.style.cssText = `
             position: fixed;
             top: 20px;
             left: 50%;
-            transform: translateX(-50%);
-            background: #1e1e1e;
+            transform: translateX(-50%) translateY(-20px);
+            background: linear-gradient(135deg, #1e1e1e, #2d2d2d);
             color: white;
-            padding: 15px 20px;
-            border-radius: 10px;
+            padding: 15px 25px;
+            border-radius: 12px;
             z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             font-weight: 500;
             max-width: 90%;
             text-align: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+            border-left: 4px solid #1e1e1e;
         `;
         successDiv.textContent = message;
         document.body.appendChild(successDiv);
-        setTimeout(() => successDiv.remove(), 5000);
+        
+        // Анимация появления
+        setTimeout(() => {
+            successDiv.style.opacity = '1';
+            successDiv.style.transform = 'translateX(-50%) translateY(0)';
+        }, 10);
+        
+        setTimeout(() => {
+            successDiv.style.opacity = '0';
+            successDiv.style.transform = 'translateX(-50%) translateY(-20px)';
+            setTimeout(() => {
+                if (successDiv.parentNode) {
+                    successDiv.parentNode.removeChild(successDiv);
+                }
+            }, 300);
+        }, 3000);
     }
 
     window.copyOrderText = function(element) {
         const text = element.textContent;
+        
+        // Визуальная обратная связь
+        const originalBackground = element.style.background;
+        element.style.background = 'rgba(255,255,255,0.3)';
+        element.style.transform = 'scale(0.98)';
+        
         navigator.clipboard.writeText(text).then(() => {
-            showSuccess("✅ Текст заказа скопирован!");
+            showSuccess("✅ Заказ скопирован в буфер обмена!");
         }).catch(() => {
+            // Fallback для старых браузеров
             const textArea = document.createElement("textarea");
             textArea.value = text;
             document.body.appendChild(textArea);
             textArea.select();
             document.execCommand("copy");
             document.body.removeChild(textArea);
-            showSuccess("✅ Текст заказа скопирован!");
+            showSuccess("✅ Заказ скопирован в буфер обмена!");
+        }).finally(() => {
+            setTimeout(() => {
+                element.style.background = originalBackground;
+                element.style.transform = 'scale(1)';
+            }, 300);
         });
     };
 });
