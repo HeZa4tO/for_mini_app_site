@@ -22,6 +22,27 @@ document.addEventListener("DOMContentLoaded", () => {
         "📦 Другое": {"Обычная 🚚": 1500, "Экспресс 🚀": 5000}
     };
 
+    // Функция для отладки Telegram WebApp
+    function debugTelegramWebApp() {
+        console.log("=== DEBUG TELEGRAM WEBAPP ===");
+        console.log("Telegram object:", window.Telegram);
+        console.log("WebApp object:", window.Telegram?.WebApp);
+        
+        if (window.Telegram?.WebApp) {
+            const webApp = Telegram.WebApp;
+            console.log("initData:", webApp.initData);
+            console.log("initDataUnsafe:", webApp.initDataUnsafe);
+            console.log("platform:", webApp.platform);
+            console.log("version:", webApp.version);
+            console.log("colorScheme:", webApp.colorScheme);
+            console.log("themeParams:", webApp.themeParams);
+            console.log("isExpanded:", webApp.isExpanded);
+            console.log("viewportHeight:", webApp.viewportHeight);
+            console.log("MainButton:", webApp.MainButton);
+        }
+        console.log("=== END DEBUG ===");
+    }
+
     // СУПЕР-НАДЕЖНАЯ проверка Telegram WebApp
     const isTelegramWebApp = () => {
         // Способ 1: Проверка глобального объекта Telegram
@@ -116,6 +137,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const isTelegram = isTelegramWebApp();
         console.log("🏁 ФИНАЛЬНЫЙ РЕЖИМ:", isTelegram ? "TELEGRAM" : "BROWSER");
 
+        // Вызываем отладку
+        debugTelegramWebApp();
+
         // Показываем соответствующий интерфейс
         if (isTelegram) {
             setupTelegramMode();
@@ -130,11 +154,29 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Инициализируем Telegram WebApp
         if (window.Telegram && window.Telegram.WebApp) {
-            Telegram.WebApp.ready();
-            Telegram.WebApp.expand(); // Раскрываем на весь экран
+            try {
+                Telegram.WebApp.ready();
+                Telegram.WebApp.expand(); // Раскрываем на весь экран
+                console.log("✅ Telegram WebApp инициализирован");
+                
+                // Показываем основную кнопку Telegram
+                Telegram.WebApp.MainButton.setText("📦 ОТПРАВИТЬ ЗАКАЗ");
+                Telegram.WebApp.MainButton.show();
+                Telegram.WebApp.MainButton.onClick(handleTelegramSubmit);
+                
+                // Скрываем нашу кнопку, используем Telegram кнопку
+                sendButton.style.display = 'none';
+                
+            } catch (error) {
+                console.error("❌ Ошибка инициализации Telegram:", error);
+                // Если Telegram кнопка не работает, оставляем нашу
+                sendButton.style.display = 'block';
+                sendButton.onclick = handleTelegramSubmit;
+            }
+        } else {
+            console.error("❌ Telegram WebApp не доступен");
+            sendButton.onclick = handleTelegramSubmit;
         }
-        
-        sendButton.onclick = handleTelegramSubmit;
     }
 
     function setupBrowserMode() {
@@ -168,26 +210,57 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("📦 Отправка через Telegram:", orderData);
 
         try {
-            sendButton.disabled = true;
-            sendButton.textContent = "Отправка...";
+            // Показываем индикатор загрузки
+            if (Telegram.WebApp.MainButton && Telegram.WebApp.MainButton.isVisible) {
+                Telegram.WebApp.MainButton.showProgress();
+            } else {
+                sendButton.disabled = true;
+                sendButton.textContent = "Отправка...";
+            }
 
             // Проверяем, что Telegram WebApp доступен
             if (!window.Telegram?.WebApp) {
                 throw new Error("Telegram WebApp не доступен");
             }
 
+            // Дополнительная проверка данных
+            if (!Telegram.WebApp.initData) {
+                console.warn("⚠️ initData пустой, но пытаемся отправить");
+            }
+
+            // Отправляем данные
             Telegram.WebApp.sendData(JSON.stringify(orderData));
+            
+            console.log("✅ Данные отправлены в Telegram");
             showSuccess("✅ Заказ успешно отправлен!");
             
+            // Даем время увидеть сообщение об успехе
             setTimeout(() => {
-                Telegram.WebApp.close();
-            }, 2000);
+                if (window.Telegram?.WebApp?.close) {
+                    Telegram.WebApp.close();
+                }
+            }, 1500);
 
         } catch (error) {
-            console.error("❌ Ошибка Telegram:", error);
-            showError("❌ Ошибка отправки. Попробуйте еще раз.");
-            sendButton.disabled = false;
-            sendButton.textContent = "📦 Отправить заказ в Telegram";
+            console.error("❌ Ошибка отправки в Telegram:", error);
+            
+            // Показываем детальную ошибку
+            let errorMessage = "❌ Ошибка отправки. ";
+            if (error.message.includes("initData")) {
+                errorMessage += "Попробуйте перезагрузить приложение.";
+            } else {
+                errorMessage += "Попробуйте еще раз.";
+            }
+            
+            showError(errorMessage);
+            
+            // Восстанавливаем кнопку
+            if (Telegram.WebApp.MainButton && Telegram.WebApp.MainButton.isVisible) {
+                Telegram.WebApp.MainButton.hideProgress();
+            } else {
+                sendButton.disabled = false;
+                sendButton.textContent = "📦 Отправить заказ в Telegram";
+            }
         }
     }
 
