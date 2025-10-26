@@ -22,15 +22,53 @@ document.addEventListener("DOMContentLoaded", () => {
         "📦 Другое": {"Обычная 🚚": 1500, "Экспресс 🚀": 5000}
     };
 
-    // НАДЕЖНАЯ проверка Telegram WebApp
+    // СУПЕР-НАДЕЖНАЯ проверка Telegram WebApp
     const isTelegramWebApp = () => {
-        // Проверяем несколько признаков Telegram WebApp
-        if (typeof window.Telegram === 'undefined') return false;
-        if (!window.Telegram.WebApp) return false;
+        // Способ 1: Проверка глобального объекта Telegram
+        if (window.Telegram && window.Telegram.WebApp) {
+            const webApp = window.Telegram.WebApp;
+            
+            // Проверяем различные признаки Telegram WebApp
+            if (webApp.initData || webApp.initDataUnsafe || webApp.platform) {
+                console.log("✅ Обнаружен Telegram WebApp по основным признакам");
+                return true;
+            }
+            
+            // Проверяем версию WebApp
+            if (webApp.version) {
+                console.log("✅ Обнаружен Telegram WebApp по версии:", webApp.version);
+                return true;
+            }
+            
+            // Проверяем расширенный объект
+            if (webApp.colorScheme || webApp.themeParams) {
+                console.log("✅ Обнаружен Telegram WebApp по themeParams");
+                return true;
+            }
+        }
         
-        // Telegram WebApp всегда имеет platform и version
-        const webApp = window.Telegram.WebApp;
-        return !!(webApp.platform && webApp.version);
+        // Способ 2: Проверка User Agent
+        const userAgent = navigator.userAgent.toLowerCase();
+        if (userAgent.includes('telegram') || userAgent.includes('webapp')) {
+            console.log("✅ Обнаружен Telegram WebApp по User Agent");
+            return true;
+        }
+        
+        // Способ 3: Проверка URL параметров (Telegram Mini Apps часто имеют tgWebAppData)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('tgWebAppData') || urlParams.has('tgWebAppVersion')) {
+            console.log("✅ Обнаружен Telegram WebApp по URL параметрам");
+            return true;
+        }
+        
+        // Способ 4: Проверка на наличие Telegram-специфичных методов
+        if (typeof window.TelegramWebviewProxy !== 'undefined') {
+            console.log("✅ Обнаружен Telegram WebApp по TelegramWebviewProxy");
+            return true;
+        }
+        
+        console.log("❌ Режим: Браузер (Telegram не обнаружен)");
+        return false;
     };
 
     let totalRub = 0;
@@ -65,30 +103,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
     totalSumDiv.textContent = `💰 Общая сумма: ₽${Math.ceil(totalRub).toLocaleString()}`;
 
-    // Определяем окружение при загрузке
-    console.log("🔍 Проверка окружения:");
-    console.log("Telegram:", !!window.Telegram);
-    console.log("Telegram.WebApp:", !!window.Telegram?.WebApp);
-    console.log("Telegram.WebApp.platform:", window.Telegram?.WebApp?.platform);
-    console.log("Telegram.WebApp.version:", window.Telegram?.WebApp?.version);
-    console.log("Режим:", isTelegramWebApp() ? "TELEGRAM" : "BROWSER");
+    // Ждем немного для инициализации Telegram WebApp (иногда он грузится с задержкой)
+    setTimeout(() => {
+        console.log("🔍 Окончательная проверка окружения:");
+        console.log("window.Telegram:", !!window.Telegram);
+        console.log("window.Telegram.WebApp:", !!window.Telegram?.WebApp);
+        console.log("initData:", !!window.Telegram?.WebApp?.initData);
+        console.log("platform:", window.Telegram?.WebApp?.platform);
+        console.log("version:", window.Telegram?.WebApp?.version);
+        console.log("User Agent:", navigator.userAgent);
+        
+        const isTelegram = isTelegramWebApp();
+        console.log("🏁 ФИНАЛЬНЫЙ РЕЖИМ:", isTelegram ? "TELEGRAM" : "BROWSER");
 
-    // Показываем соответствующий интерфейс
-    if (isTelegramWebApp()) {
-        setupTelegramMode();
-    } else {
-        setupBrowserMode();
-    }
+        // Показываем соответствующий интерфейс
+        if (isTelegram) {
+            setupTelegramMode();
+        } else {
+            setupBrowserMode();
+        }
+    }, 100);
 
     function setupTelegramMode() {
-        console.log("🟢 Режим: Telegram WebApp");
+        console.log("🟢 РЕЖИМ: Telegram WebApp");
         sendButton.textContent = "📦 Отправить заказ в Telegram";
+        
+        // Инициализируем Telegram WebApp
+        if (window.Telegram && window.Telegram.WebApp) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand(); // Раскрываем на весь экран
+        }
         
         sendButton.onclick = handleTelegramSubmit;
     }
 
     function setupBrowserMode() {
-        console.log("🟡 Режим: Браузер");
+        console.log("🟡 РЕЖИМ: Браузер");
         sendButton.textContent = "📋 Показать инструкцию";
         
         sendButton.onclick = handleBrowserSubmit;
@@ -120,6 +170,11 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             sendButton.disabled = true;
             sendButton.textContent = "Отправка...";
+
+            // Проверяем, что Telegram WebApp доступен
+            if (!window.Telegram?.WebApp) {
+                throw new Error("Telegram WebApp не доступен");
+            }
 
             Telegram.WebApp.sendData(JSON.stringify(orderData));
             showSuccess("✅ Заказ успешно отправлен!");
