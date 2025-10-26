@@ -6,19 +6,19 @@ document.addEventListener("DOMContentLoaded", () => {
         position: fixed;
         top: 10px;
         right: 10px;
-        width: 350px;
-        height: 250px;
-        background: rgba(0,0,0,0.9);
+        width: 400px;
+        height: 300px;
+        background: rgba(0,0,0,0.95);
         color: #00ff00;
         font-family: 'Courier New', monospace;
-        font-size: 11px;
-        padding: 10px;
+        font-size: 12px;
+        padding: 15px;
         overflow-y: auto;
         z-index: 9999;
         border: 2px solid #1e1e1e;
-        border-radius: 8px;
-        display: none;
-        line-height: 1.3;
+        border-radius: 10px;
+        display: block;
+        line-height: 1.4;
     `;
     logContainer.id = 'debug-log-container';
     document.body.appendChild(logContainer);
@@ -30,9 +30,10 @@ document.addEventListener("DOMContentLoaded", () => {
         
         const logEntry = document.createElement('div');
         logEntry.style.cssText = `
-            margin-bottom: 4px;
-            border-bottom: 1px solid #1e1e1e;
-            padding-bottom: 4px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+            word-wrap: break-word;
         `;
         logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
         logContainer.appendChild(logEntry);
@@ -41,16 +42,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Кнопка для показа/скрытия логов
     const toggleLogsBtn = document.createElement('button');
-    toggleLogsBtn.textContent = '📋 Логи';
+    toggleLogsBtn.textContent = '❌ Закрыть логи';
     toggleLogsBtn.style.cssText = `
         position: fixed;
-        top: 10px;
-        right: 10px;
+        top: 15px;
+        right: 15px;
         z-index: 10000;
-        padding: 8px 12px;
-        background: #1e1e1e;
+        padding: 10px 15px;
+        background: #ff4757;
         color: white;
-        border: 2px solid #1e1e1e;
+        border: 2px solid #ff4757;
         border-radius: 8px;
         cursor: pointer;
         font-size: 12px;
@@ -59,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
     toggleLogsBtn.onclick = () => {
         const isVisible = logContainer.style.display === 'block';
         logContainer.style.display = isVisible ? 'none' : 'block';
-        toggleLogsBtn.textContent = isVisible ? '📋 Логи' : '❌ Закрыть';
+        toggleLogsBtn.textContent = isVisible ? '📋 Показать логи' : '❌ Закрыть логи';
         toggleLogsBtn.style.background = isVisible ? '#1e1e1e' : '#ff4757';
     };
     document.body.appendChild(toggleLogsBtn);
@@ -68,11 +69,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusDiv = document.createElement('div');
     statusDiv.style.cssText = `
         position: fixed;
-        top: 10px;
-        left: 10px;
+        top: 15px;
+        left: 15px;
         background: #1e1e1e;
         color: white;
-        padding: 8px 12px;
+        padding: 10px 15px;
         border-radius: 8px;
         font-size: 12px;
         font-weight: bold;
@@ -84,18 +85,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Переопределяем console.log для автоматического логирования
     const originalConsoleLog = console.log;
+    const originalConsoleError = console.error;
+    
     console.log = function(...args) {
         originalConsoleLog.apply(console, args);
-        showLog(args.map(arg => 
+        showLog('🔵 ' + args.map(arg => 
+            typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+        ).join(' '));
+    };
+    
+    console.error = function(...args) {
+        originalConsoleError.apply(console, args);
+        showLog('🔴 ' + args.map(arg => 
             typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
         ).join(' '));
     };
 
     // ==================== ОСНОВНОЙ КОД ====================
+    console.log("🚀 Приложение загружено! Начинаем инициализацию...");
+
     const cart = JSON.parse(sessionStorage.getItem("cart") || "[]");
     const checkoutCart = document.getElementById("checkoutCart");
     const totalSumDiv = document.getElementById("totalSum");
     const sendButton = document.getElementById("sendOrder");
+
+    console.log("📦 Корзина из sessionStorage:", cart);
+    console.log("🔍 Элементы DOM:", {
+        checkoutCart: !!checkoutCart,
+        totalSumDiv: !!totalSumDiv,
+        sendButton: !!sendButton
+    });
 
     const RUB_RATE = 13;
     
@@ -117,23 +136,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Функция для отладки Telegram WebApp
     function debugTelegramWebApp() {
-        console.log("=== DEBUG TELEGRAM WEBAPP ===");
-        console.log("Telegram object:", window.Telegram);
-        console.log("WebApp object:", window.Telegram?.WebApp);
+        console.log("=== 🔍 DEBUG TELEGRAM WEBAPP ===");
+        console.log("Telegram object exists:", !!window.Telegram);
+        console.log("WebApp object exists:", !!window.Telegram?.WebApp);
         
         if (window.Telegram?.WebApp) {
             const webApp = Telegram.WebApp;
-            console.log("initData:", webApp.initData ? "ЕСТЬ" : "НЕТ");
-            console.log("initDataUnsafe:", webApp.initDataUnsafe ? "ЕСТЬ" : "НЕТ");
-            console.log("platform:", webApp.platform);
-            console.log("version:", webApp.version);
-            console.log("colorScheme:", webApp.colorScheme);
-            console.log("themeParams:", webApp.themeParams);
+            console.log("initData:", webApp.initData ? "✅ ЕСТЬ" : "❌ НЕТ");
+            console.log("initDataUnsafe:", webApp.initDataUnsafe ? "✅ ЕСТЬ" : "❌ НЕТ");
+            console.log("platform:", webApp.platform || "❌ НЕТ");
+            console.log("version:", webApp.version || "❌ НЕТ");
+            console.log("colorScheme:", webApp.colorScheme || "❌ НЕТ");
             console.log("isExpanded:", webApp.isExpanded);
             console.log("viewportHeight:", webApp.viewportHeight);
-            console.log("MainButton:", webApp.MainButton ? "ДОСТУПЕН" : "НЕТ");
+            console.log("MainButton available:", !!webApp.MainButton);
         }
         console.log("User Agent:", navigator.userAgent);
+        
+        // Проверка URL параметров
+        const urlParams = new URLSearchParams(window.location.search);
+        console.log("URL tgWebAppData:", urlParams.has('tgWebAppData'));
+        console.log("URL tgWebAppVersion:", urlParams.has('tgWebAppVersion'));
         console.log("=== END DEBUG ===");
     }
 
@@ -186,6 +209,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return false;
     };
 
+    // Отображаем товары в корзине
+    console.log("🛒 Начинаем отображение корзины...");
     let totalRub = 0;
     checkoutCart.innerHTML = "";
 
@@ -197,6 +222,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const taxRub = Math.ceil(priceRub * 0.1);
         const itemTotalRub = Math.ceil(priceRub + deliveryRub + taxRub);
         totalRub += itemTotalRub;
+
+        console.log(`📦 Товар ${index + 1}:`, {
+            category: item.category,
+            priceYuan: priceYuan,
+            priceRub: priceRub,
+            delivery: deliveryRub,
+            total: itemTotalRub
+        });
 
         const div = document.createElement("div");
         div.className = "checkout-item";
@@ -217,6 +250,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     totalSumDiv.textContent = `💰 Общая сумма: ₽${Math.ceil(totalRub).toLocaleString()}`;
+    console.log("💰 Итоговая сумма:", totalRub);
+
+    // ДЕБАГ: Проверяем что кнопка существует и на нее назначен обработчик
+    console.log("🔍 Проверка кнопки отправки:");
+    console.log("sendButton элемент:", sendButton);
+    console.log("sendButton текст:", sendButton.textContent);
+    console.log("sendButton onclick до:", sendButton.onclick);
 
     // Ждем немного для инициализации Telegram WebApp (иногда он грузится с задержкой)
     setTimeout(() => {
@@ -249,7 +289,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 100);
 
     function setupTelegramMode() {
-        console.log("🟢 РЕЖИМ: Telegram WebApp");
+        console.log("🟢 НАСТРОЙКА РЕЖИМА: Telegram WebApp");
         sendButton.textContent = "📦 Отправить заказ в Telegram";
         
         // Инициализируем Telegram WebApp
@@ -266,36 +306,92 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 // Скрываем нашу кнопку, используем Telegram кнопку
                 sendButton.style.display = 'none';
+                console.log("✅ MainButton Telegram активирована");
                 
             } catch (error) {
                 console.error("❌ Ошибка инициализации Telegram:", error);
                 // Если Telegram кнопка не работает, оставляем нашу
                 sendButton.style.display = 'block';
                 sendButton.onclick = handleTelegramSubmit;
+                console.log("🔄 Используем стандартную кнопку");
             }
         } else {
             console.error("❌ Telegram WebApp не доступен");
             sendButton.onclick = handleTelegramSubmit;
         }
+
+        // Двойная проверка обработчика
+        console.log("sendButton onclick после:", sendButton.onclick);
+        console.log("sendButton display:", sendButton.style.display);
     }
 
     function setupBrowserMode() {
-        console.log("🟡 РЕЖИМ: Браузер");
+        console.log("🟡 НАСТРОЙКА РЕЖИМА: Браузер");
         sendButton.textContent = "📋 Показать инструкцию";
         
         sendButton.onclick = handleBrowserSubmit;
+        console.log("✅ Обработчик установлен для браузера");
     }
 
+    // ДОБАВЛЯЕМ ОБРАБОТЧИКИ ДЛЯ ДЕБАГА
+    console.log("🎯 Устанавливаем обработчики для дебага...");
+
+    // Обработчик для ВСЕХ кликов на кнопки
+    document.addEventListener('click', function(e) {
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+            const button = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
+            console.log("🚨 КЛИК НА ЛЮБУЮ КНОПКУ:", {
+                text: button.textContent,
+                id: button.id,
+                class: button.className
+            });
+        }
+    });
+
+    // Специальный обработчик для кнопки отправки
+    const originalOnClick = sendButton.onclick;
+    sendButton.onclick = function(e) {
+        console.log("🎯 КНОПКА ОТПРАВКИ НАЖАТА! Событие:", e);
+        console.log("🔍 Информация о кнопке:", {
+            id: this.id,
+            text: this.textContent,
+            disabled: this.disabled
+        });
+        
+        if (originalOnClick) {
+            console.log("🔄 Вызываем оригинальный обработчик");
+            originalOnClick.call(this, e);
+        } else {
+            console.log("❌ Нет оригинального обработчика! Вызываем handleTelegramSubmit напрямую");
+            handleTelegramSubmit();
+        }
+    };
+
+    // Дублируем через addEventListener для надежности
+    sendButton.addEventListener('click', function(e) {
+        console.log("🎯 addEventListener: Кнопка отправки нажата!");
+    }, true);
+
+    console.log("✅ Обработчики установлены");
+
     async function handleTelegramSubmit() {
-        console.log("🟡 1. Начало отправки заказа");
+        console.log("🟡 1. НАЧАЛО ОТПРАВКИ ЗАКАЗА - КНОПКА НАЖАТА");
+        
+        // Принудительно показываем логи
+        const logContainer = document.getElementById('debug-log-container');
+        if (logContainer) {
+            logContainer.style.display = 'block';
+        }
         
         const formData = getFormData();
+        console.log("🟡 2. Данные формы:", formData);
+        
         if (!formData.valid) {
-            console.log("🔴 2. Форма не валидна");
+            console.log("🔴 3. Форма не валидна - ПРЕРЫВАЕМ");
             return;
         }
         
-        console.log("🟢 3. Форма валидна, готовим данные");
+        console.log("🟢 4. Форма валидна, готовим данные");
 
         // Добавляем расчет доставки в рублях для каждого товара
         const itemsWithDelivery = cart.map(item => {
@@ -314,15 +410,19 @@ document.addEventListener("DOMContentLoaded", () => {
             source: 'telegram'
         };
 
-        console.log("📦 Данные для отправки:", orderData);
+        console.log("📦 5. Данные для отправки:", orderData);
 
         try {
+            console.log("🟡 6. Показываем индикатор загрузки");
+            
             // Показываем индикатор загрузки
             if (Telegram.WebApp.MainButton && Telegram.WebApp.MainButton.isVisible) {
                 Telegram.WebApp.MainButton.showProgress();
+                console.log("✅ MainButton progress показан");
             } else {
                 sendButton.disabled = true;
                 sendButton.textContent = "Отправка...";
+                console.log("✅ Стандартная кнопка обновлена");
             }
 
             // Проверяем, что Telegram WebApp доступен
@@ -330,28 +430,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 throw new Error("Telegram WebApp не доступен");
             }
 
-            // Дополнительная проверка данных
-            if (!Telegram.WebApp.initData) {
-                console.warn("⚠️ initData пустой, но пытаемся отправить");
-            }
+            console.log("🟡 7. Проверяем initData:", Telegram.WebApp.initData ? "✅ ЕСТЬ" : "❌ НЕТ");
 
-            console.log("🔵 4. Пытаемся отправить через Telegram WebApp");
+            console.log("🔵 8. Пытаемся отправить через Telegram WebApp...");
             
             // Отправляем данные
             Telegram.WebApp.sendData(JSON.stringify(orderData));
             
-            console.log("✅ 5. Данные отправлены в Telegram");
+            console.log("✅ 9. Данные отправлены в Telegram");
             showSuccess("✅ Заказ успешно отправлен!");
             
             // Даем время увидеть сообщение об успехе
             setTimeout(() => {
+                console.log("🔵 10. Закрываем приложение");
                 if (window.Telegram?.WebApp?.close) {
                     Telegram.WebApp.close();
                 }
             }, 1500);
 
         } catch (error) {
-            console.error("❌ 6. Ошибка отправки в Telegram:", error);
+            console.error("❌ 11. ОШИБКА ОТПРАВКИ В TELEGRAM:", error);
             
             // Показываем детальную ошибку
             let errorMessage = "❌ Ошибка отправки. ";
@@ -366,14 +464,17 @@ document.addEventListener("DOMContentLoaded", () => {
             // Восстанавливаем кнопку
             if (Telegram.WebApp.MainButton && Telegram.WebApp.MainButton.isVisible) {
                 Telegram.WebApp.MainButton.hideProgress();
+                console.log("✅ MainButton progress скрыт");
             } else {
                 sendButton.disabled = false;
                 sendButton.textContent = "📦 Отправить заказ в Telegram";
+                console.log("✅ Стандартная кнопка восстановлена");
             }
         }
     }
 
     function handleBrowserSubmit() {
+        console.log("🟡 Обработчик браузера вызван");
         const formData = getFormData();
         if (!formData.valid) return;
 
@@ -398,21 +499,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function getFormData() {
+        console.log("🔍 ПРОВЕРКА ПОЛЕЙ ФОРМЫ:");
+        
         const fullname = document.getElementById("fullname")?.value.trim() || "";
         const phone = document.getElementById("phone")?.value.trim() || "";
         const city = document.getElementById("city")?.value.trim() || "";
         const address = document.getElementById("address")?.value.trim() || "";
 
+        console.log("ФИО:", fullname);
+        console.log("Телефон:", phone);
+        console.log("Город:", city);
+        console.log("Адрес:", address);
+        console.log("Корзина:", cart.length, "товаров");
+
         if (!fullname || !phone || !city || !address) {
+            console.log("🔴 Не все поля заполнены!");
             showError("Пожалуйста, заполните все поля формы!");
             return { valid: false };
         }
 
         if (cart.length === 0) {
+            console.log("🔴 Корзина пуста!");
             showError("Корзина пуста! Добавьте товары перед оформлением заказа.");
             return { valid: false };
         }
 
+        console.log("🟢 Все проверки пройдены");
         return {
             valid: true,
             user: { fullname, phone, city, address }
@@ -420,6 +532,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showBrowserInstruction(orderData) {
+        console.log("🟡 Показываем инструкцию для браузера");
         const orderText = formatOrderForManual(orderData);
         
         const instructionHTML = `
@@ -502,7 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showError(message) {
-        console.error("❌ Ошибка:", message);
+        console.error("❌ Показываем ошибку:", message);
         const errorDiv = document.createElement("div");
         errorDiv.style.cssText = `
             position: fixed;
@@ -530,7 +643,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function showSuccess(message) {
-        console.log("✅ Успех:", message);
+        console.log("✅ Показываем успех:", message);
         const successDiv = document.createElement("div");
         successDiv.style.cssText = `
             position: fixed;
@@ -591,19 +704,18 @@ document.addEventListener("DOMContentLoaded", () => {
         
         /* Стили для контейнера логов */
         #debug-log-container::-webkit-scrollbar {
-            width: 6px;
+            width: 8px;
         }
         #debug-log-container::-webkit-scrollbar-track {
             background: #1a1a1a;
         }
         #debug-log-container::-webkit-scrollbar-thumb {
             background: #1e1e1e;
-            border-radius: 3px;
+            border-radius: 4px;
         }
     `;
     document.head.appendChild(style);
 
-    // Начальное сообщение
-    console.log("🚀 Приложение загружено!");
-    console.log("💡 Нажмите кнопку '📋 Логи' в правом верхнем углу для просмотра логов");
+    console.log("✅ ВСЕ СИСТЕМЫ ЗАПУЩЕНЫ!");
+    console.log("💡 Логи открыты автоматически. Нажмите '❌ Закрыть логи' чтобы скрыть");
 });
