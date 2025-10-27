@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     const BOT_CONFIG = {
         token: '8366666509:AAFzh9S9m8ud3yRIJMRumLwZvEOH2CiCq44',
-        chatId: '1668124322'
+        chatId: 8411520808
     };
     const isTelegramWebApp = () => {
         console.log("🔍 Проверка Telegram WebApp...");
