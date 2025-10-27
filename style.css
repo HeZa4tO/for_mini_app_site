@@ -160,7 +160,6 @@ input:focus {
   border-color: #3498db;
 }
 
-/* Кастомный select для цвета и доставки */
 .custom-select-wrapper, .custom-delivery-wrapper {
   position: relative;
   margin: 12px 0;
@@ -304,7 +303,6 @@ input:focus {
   transform: scale(0.98);
 }
 
-/* Адаптивность для очень маленьких экранов */
 @media (max-width: 360px) {
   body {
     padding: 12px;
@@ -328,7 +326,6 @@ input:focus {
   }
 }
 
-/* Поддержка landscape ориентации */
 @media (max-height: 500px) and (orientation: landscape) {
   #categories {
     max-height: 40vh;

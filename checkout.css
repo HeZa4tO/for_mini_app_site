@@ -161,7 +161,6 @@ input:focus, select:focus {
   transform: none;
 }
 
-/* Стили для уведомлений */
 .notification {
   position: fixed;
   top: 20px;
@@ -190,7 +189,6 @@ input:focus, select:focus {
   border-left: 4px solid #ff4757;
 }
 
-/* Адаптивность для очень маленьких экранов */
 @media (max-width: 360px) {
   body {
     padding: 12px;
@@ -214,7 +212,6 @@ input:focus, select:focus {
   }
 }
 
-/* Поддержка landscape ориентации */
 @media (max-height: 500px) and (orientation: landscape) {
   #orderForm {
     margin-bottom: 12px;

@@ -4,8 +4,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const cart = JSON.parse(sessionStorage.getItem("cart") || "[]");
     const checkoutCart = document.getElementById("checkoutCart");
     const totalSumDiv = document.getElementById("totalSum");
-    
-    // НАДЕЖНЫЙ ПОИСК КНОПКИ
     let sendButton = document.getElementById("sendOrder");
     if (!sendButton) {
         console.warn("❌ Кнопка не найдена по ID, ищем по тексту...");
@@ -26,10 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("❌ КРИТИЧЕСКАЯ ОШИБКА: Кнопка отправки не найдена!");
         return;
     }
-
     const RUB_RATE = 13;
-    
-    // Цены доставки
     const DELIVERY_PRICES = {
         "👟 Кроссовки": {"Обычная 🚚": 2000, "Экспресс 🚀": 6500},
         "🥾 Ботинки": {"Обычная 🚚": 2100, "Экспресс 🚀": 7000},
@@ -44,14 +39,10 @@ document.addEventListener("DOMContentLoaded", () => {
         "🎒 Сумки (большие)": {"Обычная 🚚": 1700, "Экспресс 🚀": 6500},
         "📦 Другое": {"Обычная 🚚": 1500, "Экспресс 🚀": 5000}
     };
-
-    // Конфигурация бота
     const BOT_CONFIG = {
-        token: '8366570428:AAEeqDHl75ouB3JkbVqg7acdESgDoTKUX9U',
-        chatId: '1363888506'
+        token: '8366666509:AAFzh9S9m8ud3yRIJMRumLwZvEOH2CiCq44',
+        chatId: '1668124322'
     };
-
-    // УЛУЧШЕННАЯ проверка Telegram WebApp
     const isTelegramWebApp = () => {
         console.log("🔍 Проверка Telegram WebApp...");
         
@@ -83,8 +74,6 @@ document.addEventListener("DOMContentLoaded", () => {
         
         return isTelegramUserAgent || hasTelegramParams;
     };
-
-    // Отображаем товары в корзине
     let totalRub = 0;
     let totalItemsPrice = 0;
     let totalDelivery = 0;
@@ -125,7 +114,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     totalSumDiv.textContent = `💰 Общая сумма: ₽${Math.ceil(totalRub).toLocaleString()}`;
 
-    // Инициализация обработчиков
     setTimeout(() => {
         const isTelegram = isTelegramWebApp();
         console.log("🏁 ФИНАЛЬНЫЙ РЕЖИМ:", isTelegram ? "TELEGRAM" : "BROWSER");
@@ -277,16 +265,14 @@ document.addEventListener("DOMContentLoaded", () => {
             sendButton.textContent = "📦 Отправить заказ";
         }
     }
-
-    // Функция для форматирования заказа в нужный формат
     function formatOrderMessage(orderData) {
         const user = orderData.user;
         const items = orderData.items;
         
-        let message = `🛒 НОВЫЙ ЗАКАЗ ИЗ ${orderData.source === 'telegram' ? 'TELEGRAM' : 'БРАУЗЕРА'}\n\n`;
+        let message = `🛒 НОВЫЙ ЗАКАЗ! \n\n`;
         message += `👤 Клиент: ${user.fullname}\n`;
         message += `📞 Телефон: ${user.phone}\n`;
-        message += `🏠 Адрес: ${user.address}\n\n`; // Убрал city, оставил только address
+        message += `🏠 Адрес: ${user.address}, ${user.city}\n\n`;
         
         message += `📦 Товары:\n`;
         
@@ -295,14 +281,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const priceRub = Math.ceil(priceYuan * 13);
             
             message += `${index + 1}. ${item.category}\n`;
-            message += `   💰 Цена: ¥${priceYuan} (₽${priceRub})\n`; // Добавил цену в рублях
+            message += `   💰 Цена: ¥${priceYuan} (₽${priceRub})\n`;
             message += `   📏 Размер: ${item.size}\n`;
             message += `   🎨 Цвет кнопки: ${item.color}\n`;
             message += `   🚚 Доставка: ${item.delivery}\n`;
             message += `   🔗 Ссылка: ${item.link}\n\n`;
         });
-        
-        // Добавляем разбивку стоимости
+
         message += `💰 Стоимость заказа:\n`;
         message += `   Товары: ₽${orderData.breakdown.items.toLocaleString()}\n`;
         message += `   Доставка: ₽${orderData.breakdown.delivery.toLocaleString()}\n`;
@@ -310,7 +295,6 @@ document.addEventListener("DOMContentLoaded", () => {
         message += `   Общая сумма: ₽${orderData.total.toLocaleString()}\n\n`;
         
         message += `⏰ Время: ${orderData.timestamp}\n`;
-        message += `🌐 Источник: ${orderData.source === 'telegram' ? 'Telegram' : 'Браузер'}`;
         
         return message;
     }
